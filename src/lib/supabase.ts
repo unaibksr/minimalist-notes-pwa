@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { getNotesFromIDB, saveNoteToIDB } from './db';
+import { getNotesFromIDB, getNotesFromIDBForUI, saveNoteToIDB } from './db';
 import type { Note } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
@@ -33,7 +33,15 @@ export const syncNotesWithSupabase = async (): Promise<Note[]> => {
   if (remoteNotes) {
     for (const rNote of remoteNotes) {
       const local = localNotes.find((n) => n.id === rNote.id);
-      if (!local || local.updatedAt < rNote.updated_at) {
+      if (!local) {
+        await saveNoteToIDB({
+          id: rNote.id,
+          title: rNote.title,
+          content: rNote.content,
+          updatedAt: rNote.updated_at,
+          synced: true,
+        });
+      } else if (!local.deleted && local.updatedAt < rNote.updated_at) {
         await saveNoteToIDB({
           id: rNote.id,
           title: rNote.title,
@@ -45,5 +53,5 @@ export const syncNotesWithSupabase = async (): Promise<Note[]> => {
     }
   }
 
-  return getNotesFromIDB();
+  return getNotesFromIDBForUI();
 };

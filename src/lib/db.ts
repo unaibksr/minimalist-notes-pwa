@@ -29,7 +29,12 @@ export const saveNoteToIDB = async (note: Note) => {
 export const getNotesFromIDB = async (): Promise<Note[]> => {
   const db = await initDB();
   const notes = await db.getAllFromIndex('notes', 'by-updated');
-  return notes.filter((n) => !n.deleted).reverse();
+  return notes.reverse();
+};
+
+export const getNotesFromIDBForUI = async (): Promise<Note[]> => {
+  const notes = await getNotesFromIDB();
+  return notes.filter((n) => !n.deleted);
 };
 
 export const deleteNoteFromIDB = async (id: string) => {

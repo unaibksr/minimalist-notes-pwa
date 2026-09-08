@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Note, Theme } from './types';
-import { getNotesFromIDB, saveNoteToIDB, deleteNoteFromIDB } from './lib/db';
+import { getNotesFromIDBForUI, saveNoteToIDB, deleteNoteFromIDB } from './lib/db';
 import { syncNotesWithSupabase } from './lib/supabase';
 import { RichEditor } from './components/RichEditor';
 import { Search, Plus, Trash2, Moon, Sun, Check, RefreshCw, PanelLeft, EyeOff, Eye, Copy, Download, Share2 } from 'lucide-react';
@@ -89,7 +89,7 @@ export const App: React.FC = () => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
     saveTimeoutRef.current = setTimeout(async () => {
-      const currentNotes = await getNotesFromIDB();
+      const currentNotes = await getNotesFromIDBForUI();
       const updated = currentNotes.find((n) => n.id === activeNoteId);
       if (updated) {
         const payload = { ...updated, [field]: value, updatedAt: Date.now(), synced: false };
