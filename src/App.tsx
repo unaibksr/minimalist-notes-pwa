@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Note, Theme } from './types';
 import { getNotesFromIDB, saveNoteToIDB, deleteNoteFromIDB } from './lib/db';
-import { initAnonAuth, syncNotesWithSupabase, signInWithMagicLink, signOut, onAuthStateChange, getSession } from './lib/supabase';
+import { syncNotesWithSupabase } from './lib/supabase';
 import { RichEditor } from './components/RichEditor';
-import { Search, Plus, Trash2, Moon, Sun, Check, RefreshCw, PanelLeft, EyeOff, Eye, Copy, Download, Mail, LogOut, User } from 'lucide-react';
+import { Search, Plus, Trash2, Moon, Sun, Check, RefreshCw, PanelLeft, EyeOff, Eye, Copy, Download, Share2 } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -13,10 +13,6 @@ export const App: React.FC = () => {
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isZenMode, setIsZenMode] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [authEmail, setAuthEmail] = useState('');
-  const [authMessage, setAuthMessage] = useState('');
-  const [authLoading, setAuthLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(window.matchMedia('(max-width: 767px)').matches);
   
   const touchStartX = useRef<number>(0);
@@ -31,12 +27,6 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     const init = async () => {
-      const session = await getSession();
-      if (session?.user) {
-        setUser(session.user);
-      } else {
-        await initAnonAuth();
-      }
       const updatedNotes = await syncNotesWithSupabase();
       setNotes(updatedNotes);
       if (updatedNotes.length > 0 && !isMobile) {
@@ -45,16 +35,6 @@ export const App: React.FC = () => {
     };
 
     init();
-
-    const subscription = onAuthStateChange(async (session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        const updatedNotes = await syncNotesWithSupabase();
-        setNotes(updatedNotes);
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, [isMobile]);
 
   useEffect(() => {
@@ -81,33 +61,10 @@ export const App: React.FC = () => {
     return text || 'No additional text';
   };
 
-  const handleMagicLinkSignIn = async () => {
-    if (!authEmail.trim()) return;
-    setAuthLoading(true);
-    setAuthMessage('');
-    const error = await signInWithMagicLink(authEmail.trim());
-    if (error) {
-      setAuthMessage(error.message);
-    } else {
-      setAuthMessage('Magic link sent! Check your email.');
-    }
-    setAuthLoading(false);
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
-    setUser(null);
-    setAuthMessage('');
-    await initAnonAuth();
-    const updatedNotes = await syncNotesWithSupabase();
-    setNotes(updatedNotes);
-  };
-
-  const handleContinueAsGuest = async () => {
-    setAuthMessage('');
-    await initAnonAuth();
-    const updatedNotes = await syncNotesWithSupabase();
-    setNotes(updatedNotes);
+  const handleShare = async () => {
+    await navigator.clipboard.writeText(window.location.href);
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('saving'), 500);
   };
 
   const handleUpdateNote = (field: 'title' | 'content', value: string) => {
@@ -238,73 +195,16 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {!user && (
-          <div className="p-3 border-b border-zinc-200 dark:border-zinc-800">
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2">Sign in to sync notes across devices</p>
-            <div className="flex gap-1 mb-2">
-              <input
-                type="email"
-                placeholder="Email"
-                value={authEmail}
-                onChange={(e) => setAuthEmail(e.target.value)}
-                className="flex-1 px-2 py-1 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded"
-              />
-              <button
-                onClick={handleMagicLinkSignIn}
-                disabled={authLoading}
-                className="px-2 py-1 text-xs bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded hover:opacity-90 disabled:opacity-50"
-              >
-                <Mail size={12} />
-              </button>
-            </div>
-            {authMessage && <p className="text-[10px] text-zinc-400 mb-2">{authMessage}</p>}
-            <button
-              onClick={handleContinueAsGuest}
-              className="w-full text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 py-1"
-            >
-              Continue as guest
-            </button>
-          </div>
-        )}
-
-        {user && !user.email && (
-          <div className="p-3 border-b border-zinc-200 dark:border-zinc-800">
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2">You're using guest mode. Sign in to sync across devices.</p>
-            <div className="flex gap-1 mb-2">
-              <input
-                type="email"
-                placeholder="Email"
-                value={authEmail}
-                onChange={(e) => setAuthEmail(e.target.value)}
-                className="flex-1 px-2 py-1 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded"
-              />
-              <button
-                onClick={handleMagicLinkSignIn}
-                disabled={authLoading}
-                className="px-2 py-1 text-xs bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded hover:opacity-90 disabled:opacity-50"
-              >
-                <Mail size={12} />
-              </button>
-            </div>
-            {authMessage && <p className="text-[10px] text-zinc-400 mb-2">{authMessage}</p>}
-          </div>
-        )}
-
-        {user?.email && (
-          <div className="p-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-            <div className="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
-              <User size={12} />
-              <span className="truncate">{user.email}</span>
-            </div>
-            <button
-              onClick={handleSignOut}
-              className="p-1 text-zinc-400 hover:text-red-500"
-              title="Sign out"
-            >
-              <LogOut size={14} />
-            </button>
-          </div>
-        )}
+        <div className="p-3 border-b border-zinc-200 dark:border-zinc-800">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2">Share this link to collaborate</p>
+          <button
+            onClick={handleShare}
+            className="w-full flex items-center justify-center gap-1 text-xs bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 px-2 py-1.5 rounded hover:opacity-90"
+          >
+            <Share2 size={12} />
+            Copy share link
+          </button>
+        </div>
 
         <div className="flex-1 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-900">
           {filteredNotes.map((note) => (
@@ -361,6 +261,14 @@ export const App: React.FC = () => {
               </div>
               
               <div className="flex items-center gap-2">
+                <button
+                  onClick={handleShare}
+                  className="hidden md:flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded"
+                  title="Copy share link"
+                >
+                  <Share2 size={14} />
+                  Share
+                </button>
                 <button
                   onClick={handleCopyNote}
                   className="hidden md:flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded"
