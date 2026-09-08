@@ -1,27 +1,48 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type Session } from '@supabase/supabase-js';
 import { getNotesFromIDB, saveNoteToIDB } from './db';
+import type { Note } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export const initAnonAuth = async () => {
+export const getSession = async () => {
   const { data } = await supabase.auth.getSession();
-  if (!data?.session) {
+  return data.session;
+};
+
+export const initAnonAuth = async () => {
+  const session = await getSession();
+  if (!session) {
     await supabase.auth.signInAnonymously();
   }
 };
 
-export const syncNotesWithSupabase = async () => {
+export const signInWithMagicLink = async (email: string) => {
+  const { error } = await supabase.auth.signInWithOtp({ email });
+  return error;
+};
+
+export const signOut = async () => {
+  await supabase.auth.signOut();
+};
+
+export const onAuthStateChange = (callback: (session: Session | null) => void) => {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    callback(session);
+  });
+  return subscription;
+};
+
+export const syncNotesWithSupabase = async (): Promise<Note[]> => {
   const { data } = await supabase.auth.getUser();
-  if (!data?.user) return;
+  if (!data?.user) return getNotesFromIDB();
   const user = data.user;
 
   const localNotes = await getNotesFromIDB();
   const unSynced = localNotes.filter((n) => !n.synced);
 
-  // Push pending local changes
   for (const note of unSynced) {
     if (note.deleted) {
       await supabase.from('notes').delete().eq('id', note.id);
@@ -38,7 +59,6 @@ export const syncNotesWithSupabase = async () => {
     await saveNoteToIDB(note);
   }
 
-  // Pull remote changes
   const { data: remoteNotes } = await supabase
     .from('notes')
     .select('*')
@@ -58,4 +78,6 @@ export const syncNotesWithSupabase = async () => {
       }
     }
   }
+
+  return getNotesFromIDB();
 };
