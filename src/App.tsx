@@ -327,6 +327,7 @@ export const App: React.FC = () => {
               onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
               onExportMarkdown={handleExportMarkdown}
               onCopyNote={handleCopyNote}
+              onBack={handleBackToList}
             />
           </div>
         ) : (

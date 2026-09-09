@@ -20,6 +20,7 @@ import {
   Download,
   Copy,
   Type,
+  ArrowLeft,
 } from 'lucide-react';
 import { MarkdownPasteHandler } from '../lib/pasteHandler';
 
@@ -30,6 +31,7 @@ interface RichEditorProps {
   onToggleFullscreen: () => void;
   onExportMarkdown: () => void;
   onCopyNote: () => void;
+  onBack?: () => void;
 }
 
 export const RichEditor: React.FC<RichEditorProps> = ({
@@ -39,6 +41,7 @@ export const RichEditor: React.FC<RichEditorProps> = ({
   onToggleFullscreen,
   onExportMarkdown,
   onCopyNote,
+  onBack,
 }) => {
   const [fontSize, setFontSize] = useState<number>(16);
   const [wordCount, setWordCount] = useState({ words: 0, chars: 0 });
@@ -265,6 +268,16 @@ export const RichEditor: React.FC<RichEditorProps> = ({
       <div style={{ fontSize: `${fontSize}px` }} className="flex-1 w-full max-w-full">
         <EditorContent editor={editor} />
       </div>
+
+      {isFullscreen && onBack && (
+        <button
+          onClick={onBack}
+          className="fixed bottom-6 right-6 z-50 p-3 rounded-full bg-black/20 dark:bg-white/20 backdrop-blur-md hover:bg-black/30 dark:hover:bg-white/30 transition-colors"
+          title="Back to notes"
+        >
+          <ArrowLeft size={24} className="text-white dark:text-zinc-900" />
+        </button>
+      )}
 
       <div className="flex items-center justify-between px-2 py-2 text-xs text-zinc-400 border-t border-zinc-100 dark:border-zinc-800">
         <div className="flex items-center gap-1">
