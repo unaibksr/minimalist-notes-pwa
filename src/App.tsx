@@ -16,6 +16,7 @@ export const App: React.FC = () => {
   const [isMobile, setIsMobile] = useState(window.matchMedia('(max-width: 767px)').matches);
   
   const touchStartX = useRef<number>(0);
+  const mainTouchStartX = useRef<number>(0);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 767px)');
@@ -61,6 +62,11 @@ export const App: React.FC = () => {
     return text || 'No additional text';
   };
 
+  const handleBackToList = async () => {
+    await syncNotesWithSupabase();
+    setActiveNoteId(null);
+  };
+
   const handleShare = async () => {
     await navigator.clipboard.writeText(window.location.href);
     setSaveStatus('saved');
@@ -71,7 +77,7 @@ export const App: React.FC = () => {
     if (!activeNoteId) return;
 
     setSaveStatus('saving');
-    
+
     setNotes((prev) =>
       prev.map((note) => {
         if (note.id === activeNoteId) {
@@ -94,8 +100,6 @@ export const App: React.FC = () => {
       if (updated) {
         const payload = { ...updated, [field]: value, updatedAt: Date.now(), synced: false };
         await saveNoteToIDB(payload);
-        const updatedNotes = await syncNotesWithSupabase();
-        setNotes(updatedNotes);
         setSaveStatus('saved');
       }
     }, 1000);
@@ -240,11 +244,18 @@ export const App: React.FC = () => {
 
       <main className={`flex-1 flex flex-col h-screen overflow-hidden ${!activeNoteId ? 'hidden md:flex' : ''} ${isZenMode ? 'md:flex' : ''}`}>
         {activeNote ? (
-           <div className="flex-1 flex flex-col h-full max-w-full p-4 md:p-8 md:px-12 overflow-y-auto">
+           <div
+             className="flex-1 flex flex-col h-full max-w-full p-4 md:p-8 md:px-12 overflow-y-auto"
+             onTouchStart={(e) => { mainTouchStartX.current = e.touches[0].clientX; }}
+             onTouchEnd={(e) => {
+               const diffX = mainTouchStartX.current - e.changedTouches[0].clientX;
+               if (diffX > 80 && isMobile) handleBackToList();
+             }}
+           >
             <div className="flex items-center justify-between pb-4 mb-4 border-b border-zinc-200 dark:border-zinc-800">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setActiveNoteId(null)}
+                  onClick={handleBackToList}
                   className="md:hidden text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
                 >
                   ← Back to list

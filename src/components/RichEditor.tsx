@@ -89,6 +89,15 @@ export const RichEditor: React.FC<RichEditorProps> = ({
   }, [editor]);
 
   useEffect(() => {
+    if (!editor) return;
+    if (isFullscreen) {
+      editor.setEditable(false);
+    } else {
+      editor.setEditable(true);
+    }
+  }, [isFullscreen, editor]);
+
+  useEffect(() => {
     if (!isFullscreen) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onToggleFullscreen();
