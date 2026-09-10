@@ -167,7 +167,7 @@ export const App: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-cream-50 dark:bg-navy-950 text-cream-800 dark:text-navy-100 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-cream-50 dark:bg-navy-950 text-cream-800 dark:text-white flex flex-col md:flex-row">
       <aside className={`w-full md:w-80 border-r border-cream-300 dark:border-navy-800 flex flex-col h-screen ${activeNoteId ? 'hidden md:flex' : ''}`}>
         <header className="p-4 border-b border-cream-300 dark:border-navy-800 flex items-center justify-between">
           <h1 className="text-xl font-bold tracking-tight text-amber-700 dark:text-amber-400">Notes</h1>
@@ -190,19 +190,19 @@ export const App: React.FC = () => {
 
         <div className="p-3">
           <div className="relative">
-            <Search className="absolute left-3 top-2.5 text-cream-400 dark:text-navy-400" size={16} />
+            <Search className="absolute left-3 top-2.5 text-cream-400 dark:text-gray-400" size={16} />
             <input
               type="text"
               placeholder="Search notes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm bg-cream-100 dark:bg-navy-900 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-400 text-cream-800 dark:text-navy-100 placeholder-cream-500 dark:placeholder-navy-400"
+              className="w-full pl-9 pr-4 py-2 text-sm bg-cream-100 dark:bg-navy-900 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-400 text-cream-800 dark:text-white placeholder-cream-500 dark:placeholder-navy-400"
             />
           </div>
         </div>
 
         <div className="p-3 border-b border-cream-300 dark:border-navy-800">
-          <p className="text-xs text-cream-500 dark:text-navy-400 mb-2">Share this link to collaborate</p>
+          <p className="text-xs text-cream-500 dark:text-gray-400 mb-2">Share this link to collaborate</p>
           <button
             onClick={handleShare}
             className="w-full flex items-center justify-center gap-1 text-xs bg-amber-500 text-amber-900 dark:bg-amber-400 dark:text-amber-950 px-2 py-1.5 rounded hover:bg-amber-600 dark:hover:bg-amber-500 transition-colors"
@@ -227,15 +227,15 @@ export const App: React.FC = () => {
               }`}
             >
               <div className="flex-1 pr-2 overflow-hidden">
-                <h3 className="font-semibold text-sm truncate text-cream-700 dark:text-navy-100" dangerouslySetInnerHTML={{ __html: highlightText(note.title || 'Untitled Note', searchQuery) }} />
-                <p className="text-xs text-cream-400 dark:text-navy-400 truncate mt-1" dangerouslySetInnerHTML={{ __html: highlightText(getPreviewText(note), searchQuery) }} />
+                <h3 className="font-semibold text-sm truncate text-cream-700 dark:text-white" dangerouslySetInnerHTML={{ __html: highlightText(note.title || 'Untitled Note', searchQuery) }} />
+                <p className="text-xs text-cream-400 dark:text-gray-400 truncate mt-1" dangerouslySetInnerHTML={{ __html: highlightText(getPreviewText(note), searchQuery) }} />
               </div>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleDeleteNote(note.id);
                 }}
-                className="opacity-0 group-hover:opacity-100 p-1 text-cream-400 dark:text-navy-400 hover:text-red-500 transition-opacity"
+                className="opacity-0 group-hover:opacity-100 p-1 text-cream-400 dark:text-gray-400 hover:text-red-500 transition-opacity"
               >
                 <Trash2 size={16} />
               </button>
@@ -258,14 +258,14 @@ export const App: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleBackToList}
-                  className="md:hidden text-sm text-cream-500 dark:text-navy-400 hover:text-amber-600 dark:hover:text-amber-400"
+                  className="md:hidden text-sm text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
                 >
                   ← Back to list
                 </button>
                 {!isMobile && (
                   <button
                     onClick={() => setIsFullscreen(true)}
-                    className="text-sm text-cream-500 dark:text-navy-400 hover:text-amber-600 dark:hover:text-amber-400"
+                    className="text-sm text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
                     title="Enter fullscreen reading"
                   >
                     📖 Reading Mode
@@ -276,7 +276,7 @@ export const App: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleShare}
-                  className="hidden md:flex items-center gap-1 text-xs text-cream-500 dark:text-navy-400 hover:text-amber-600 dark:hover:text-amber-400 bg-cream-200 dark:bg-navy-800 px-2 py-1 rounded transition-colors"
+                  className="hidden md:flex items-center gap-1 text-xs text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 bg-cream-200 dark:bg-navy-800 px-2 py-1 rounded transition-colors"
                   title="Copy share link"
                 >
                   <Share2 size={14} />
@@ -284,7 +284,7 @@ export const App: React.FC = () => {
                 </button>
                 <button
                   onClick={handleCopyNote}
-                  className="hidden md:flex items-center gap-1 text-xs text-cream-500 dark:text-navy-400 hover:text-amber-600 dark:hover:text-amber-400 bg-cream-200 dark:bg-navy-800 px-2 py-1 rounded transition-colors"
+                  className="hidden md:flex items-center gap-1 text-xs text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 bg-cream-200 dark:bg-navy-800 px-2 py-1 rounded transition-colors"
                   title="Copy note text"
                 >
                   <Copy size={14} />
@@ -292,13 +292,13 @@ export const App: React.FC = () => {
                 </button>
                 <button
                   onClick={handleExportMarkdown}
-                  className="hidden md:flex items-center gap-1 text-xs text-cream-500 dark:text-navy-400 hover:text-amber-600 dark:hover:text-amber-400 bg-cream-200 dark:bg-navy-800 px-2 py-1 rounded transition-colors"
+                  className="hidden md:flex items-center gap-1 text-xs text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 bg-cream-200 dark:bg-navy-800 px-2 py-1 rounded transition-colors"
                   title="Export as Markdown"
                 >
                   <Download size={14} />
                   Export
                 </button>
-                <div className="flex items-center gap-1 text-xs text-cream-400 dark:text-navy-400 ml-auto">
+                <div className="flex items-center gap-1 text-xs text-cream-400 dark:text-gray-400 ml-auto">
                   {saveStatus === 'saving' ? (
                     <>
                       <RefreshCw className="animate-spin" size={12} />
@@ -320,7 +320,7 @@ export const App: React.FC = () => {
                 value={activeNote.title}
                 onChange={(e) => handleUpdateNote('title', e.target.value)}
                 placeholder="Note Title"
-                className="text-2xl md:text-3xl font-bold bg-transparent border-none outline-none mb-4 w-full text-cream-800 dark:text-navy-100 placeholder-cream-500 dark:placeholder-navy-400"
+                className="text-2xl md:text-3xl font-bold bg-transparent border-none outline-none mb-4 w-full text-cream-800 dark:text-white placeholder-cream-500 dark:placeholder-navy-400"
               />
             )}
 
@@ -337,16 +337,16 @@ export const App: React.FC = () => {
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center max-w-md px-4">
               <div className="text-6xl mb-4">📝</div>
-              <h2 className="text-xl font-semibold text-cream-700 dark:text-navy-200 mb-2">No Note Selected</h2>
-              <p className="text-sm text-cream-500 dark:text-navy-400 mb-6">
+              <h2 className="text-xl font-semibold text-cream-700 dark:text-white mb-2">No Note Selected</h2>
+              <p className="text-sm text-cream-500 dark:text-gray-400 mb-6">
                 Select a note from the sidebar or create a new one to start writing.
                 Your notes are saved automatically and sync across devices.
               </p>
-              <div className="flex flex-col gap-2 text-xs text-cream-400 dark:text-navy-400">
-                <p><kbd className="px-1.5 py-0.5 bg-cream-200 dark:bg-navy-800 rounded text-cream-600 dark:text-navy-300">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-cream-200 dark:bg-navy-800 rounded text-cream-600 dark:text-navy-300">B</kbd> Bold</p>
-                <p><kbd className="px-1.5 py-0.5 bg-cream-200 dark:bg-navy-800 rounded text-cream-600 dark:text-navy-300">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-cream-200 dark:bg-navy-800 rounded text-cream-600 dark:text-navy-300">I</kbd> Italic</p>
-                <p><kbd className="px-1.5 py-0.5 bg-cream-200 dark:bg-navy-800 rounded text-cream-600 dark:text-navy-300">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-cream-200 dark:bg-navy-800 rounded text-cream-600 dark:text-navy-300">S</kbd> Export Markdown</p>
-                <p><kbd className="px-1.5 py-0.5 bg-cream-200 dark:bg-navy-800 rounded text-cream-600 dark:text-navy-300">Esc</kbd> Exit fullscreen</p>
+              <div className="flex flex-col gap-2 text-xs text-cream-400 dark:text-gray-400">
+                <p><kbd className="px-1.5 py-0.5 bg-cream-200 dark:bg-navy-800 rounded text-cream-600 dark:text-gray-300">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-cream-200 dark:bg-navy-800 rounded text-cream-600 dark:text-gray-300">B</kbd> Bold</p>
+                <p><kbd className="px-1.5 py-0.5 bg-cream-200 dark:bg-navy-800 rounded text-cream-600 dark:text-gray-300">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-cream-200 dark:bg-navy-800 rounded text-cream-600 dark:text-gray-300">I</kbd> Italic</p>
+                <p><kbd className="px-1.5 py-0.5 bg-cream-200 dark:bg-navy-800 rounded text-cream-600 dark:text-gray-300">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-cream-200 dark:bg-navy-800 rounded text-cream-600 dark:text-gray-300">S</kbd> Export Markdown</p>
+                <p><kbd className="px-1.5 py-0.5 bg-cream-200 dark:bg-navy-800 rounded text-cream-600 dark:text-gray-300">Esc</kbd> Exit fullscreen</p>
               </div>
             </div>
           </div>

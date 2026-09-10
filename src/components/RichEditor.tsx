@@ -65,7 +65,7 @@ export const RichEditor: React.FC<RichEditorProps> = ({
     editorProps: {
       attributes: {
         class:
-          'prose dark:prose-invert max-w-none focus:outline-none min-h-[calc(100vh-220px)] text-justify leading-relaxed text-cream-800 dark:text-navy-100',
+          'prose dark:prose-invert max-w-none focus:outline-none min-h-[calc(100vh-220px)] text-justify leading-relaxed text-cream-800 dark:text-white',
       },
     },
   });
@@ -197,7 +197,7 @@ export const RichEditor: React.FC<RichEditorProps> = ({
             >
               A-
             </button>
-            <span className="text-xs w-6 text-center text-cream-600 dark:text-navy-300">{fontSize}</span>
+            <span className="text-xs w-6 text-center text-cream-600 dark:text-gray-300">{fontSize}</span>
             <button
               onClick={() => setFontSize((s) => Math.min(32, s + 2))}
               className="px-2 py-1 text-xs border border-cream-400 dark:border-navy-700 rounded hover:bg-cream-200 dark:hover:bg-navy-800"
@@ -277,7 +277,7 @@ export const RichEditor: React.FC<RichEditorProps> = ({
         </button>
       )}
 
-      <div className="flex items-center justify-between px-2 py-2 text-xs text-cream-500 dark:text-navy-400 border-t border-cream-300 dark:border-navy-800">
+      <div className="flex items-center justify-between px-2 py-2 text-xs text-cream-500 dark:text-gray-400 border-t border-cream-300 dark:border-navy-800">
         <div className="flex items-center gap-1">
           <Type size={12} className="text-amber-600 dark:text-amber-400" />
           <span>{wordCount.words} words</span>
