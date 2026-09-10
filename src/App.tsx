@@ -3,16 +3,19 @@ import { Note, Theme } from './types';
 import { getNotesFromIDBForUI, saveNoteToIDB, deleteNoteFromIDB } from './lib/db';
 import { syncNotesWithSupabase } from './lib/supabase';
 import { RichEditor } from './components/RichEditor';
-import { Search, Plus, Trash2, Moon, Sun, Check, RefreshCw, PanelLeft, EyeOff, Eye, Copy, Download, Share2 } from 'lucide-react';
+import { Search, Plus, Trash2, Moon, Sun, Check, RefreshCw, Copy, Download, Share2 } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = localStorage.getItem('theme') as Theme | null;
+    if (saved === 'light' || saved === 'dark') return saved;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isZenMode, setIsZenMode] = useState(false);
   const [isMobile, setIsMobile] = useState(window.matchMedia('(max-width: 767px)').matches);
   
   const touchStartX = useRef<number>(0);
@@ -49,6 +52,7 @@ export const App: React.FC = () => {
     } else {
       document.documentElement.classList.remove('dark');
     }
+    localStorage.setItem('theme', theme);
   }, [theme]);
 
   const activeNote = notes.find((n) => n.id === activeNoteId);
@@ -164,17 +168,10 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-cream-50 dark:bg-navy-950 text-cream-800 dark:text-navy-100 flex flex-col md:flex-row">
-      <aside className={`w-full md:w-80 border-r border-cream-300 dark:border-navy-800 flex flex-col h-screen ${activeNoteId ? 'hidden md:flex' : ''} ${isZenMode ? 'hidden' : ''}`}>
+      <aside className={`w-full md:w-80 border-r border-cream-300 dark:border-navy-800 flex flex-col h-screen ${activeNoteId ? 'hidden md:flex' : ''}`}>
         <header className="p-4 border-b border-cream-300 dark:border-navy-800 flex items-center justify-between">
           <h1 className="text-xl font-bold tracking-tight text-amber-700 dark:text-amber-400">Notes</h1>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsZenMode(!isZenMode)}
-              className={`p-2 rounded-lg hover:bg-cream-200 dark:hover:bg-navy-800 ${isZenMode ? 'bg-cream-200 dark:bg-navy-700' : ''}`}
-              title={isZenMode ? 'Exit Focus Mode' : 'Focus Mode'}
-            >
-              {isZenMode ? <EyeOff size={18} className="text-amber-600 dark:text-amber-400" /> : <Eye size={18} className="text-amber-600 dark:text-amber-400" />}
-            </button>
             <button
               onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
               className="p-2 rounded-lg hover:bg-cream-200 dark:hover:bg-navy-800"
@@ -247,7 +244,7 @@ export const App: React.FC = () => {
         </div>
       </aside>
 
-      <main className={`flex-1 flex flex-col h-screen overflow-hidden ${!activeNoteId ? 'hidden md:flex' : ''} ${isZenMode ? 'md:flex' : ''}`}>
+      <main className={`flex-1 flex flex-col h-screen overflow-hidden ${!activeNoteId ? 'hidden md:flex' : ''}`}>
         {activeNote ? (
           <div
             className="flex-1 flex flex-col h-full max-w-full p-4 md:p-8 md:px-12 overflow-y-auto"
@@ -265,13 +262,13 @@ export const App: React.FC = () => {
                 >
                   ← Back to list
                 </button>
-                {isZenMode && (
+                {!isMobile && (
                   <button
-                    onClick={() => setIsZenMode(false)}
-                    className="hidden md:flex items-center gap-1 text-xs text-cream-500 dark:text-navy-400 hover:text-amber-600 dark:hover:text-amber-400 bg-cream-200 dark:bg-navy-800 px-2 py-1 rounded transition-colors"
+                    onClick={() => setIsFullscreen(true)}
+                    className="text-sm text-cream-500 dark:text-navy-400 hover:text-amber-600 dark:hover:text-amber-400"
+                    title="Enter fullscreen reading"
                   >
-                    <PanelLeft size={14} />
-                    Exit Focus Mode
+                    📖 Reading Mode
                   </button>
                 )}
               </div>
