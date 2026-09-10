@@ -6,16 +6,20 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
-      manifest: {
-        name: 'Minimal Notes',
-        short_name: 'Notes',
-        description: 'A minimalist, mobile-first rich-text notes app with offline sync.',
-        theme_color: '#ffffff',
-        background_color: '#ffffff',
-        display: 'standalone',
-        orientation: 'portrait',
+       registerType: 'autoUpdate',
+       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+       injectRegister: 'auto',
+       workbox: {
+         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+       },
+       manifest: {
+         name: 'Minimal Notes',
+         short_name: 'Notes',
+         description: 'A minimalist, mobile-first rich-text notes app with offline sync.',
+         theme_color: '#faf8f5',
+         background_color: '#faf8f5',
+         display: 'standalone',
+         orientation: 'portrait',
         icons: [
           {
             src: 'pwa-192x192.png',
