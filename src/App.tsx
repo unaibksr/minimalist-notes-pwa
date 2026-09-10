@@ -250,7 +250,7 @@ export const App: React.FC = () => {
       <main className={`flex-1 flex flex-col h-screen overflow-hidden ${!activeNoteId ? 'hidden md:flex' : ''} ${isZenMode ? 'md:flex' : ''}`}>
         {activeNote ? (
           <div
-            className={`flex-1 flex flex-col h-full max-w-full p-4 md:p-8 md:px-12 overflow-y-auto ${isFullscreen ? 'hidden' : ''}`}
+            className="flex-1 flex flex-col h-full max-w-full p-4 md:p-8 md:px-12 overflow-y-auto"
             onTouchStart={(e) => { mainTouchStartX.current = e.touches[0].clientX; }}
             onTouchEnd={(e) => {
               const diffX = mainTouchStartX.current - e.changedTouches[0].clientX;
