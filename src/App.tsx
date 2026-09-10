@@ -331,9 +331,8 @@ export const App: React.FC = () => {
               isFullscreen={isFullscreen}
               onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
               onExportMarkdown={handleExportMarkdown}
-              onCopyNote={handleCopyNote}
-              onBack={handleBackToList}
-            />
+             onCopyNote={handleCopyNote}
+             />
           </div>
         ) : (
           <div className="flex-1 flex items-center justify-center">

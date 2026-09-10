@@ -31,7 +31,6 @@ interface RichEditorProps {
   onToggleFullscreen: () => void;
   onExportMarkdown: () => void;
   onCopyNote: () => void;
-  onBack?: () => void;
 }
 
 export const RichEditor: React.FC<RichEditorProps> = ({
@@ -41,7 +40,6 @@ export const RichEditor: React.FC<RichEditorProps> = ({
   onToggleFullscreen,
   onExportMarkdown,
   onCopyNote,
-  onBack,
 }) => {
   const [fontSize, setFontSize] = useState<number>(16);
   const [wordCount, setWordCount] = useState({ words: 0, chars: 0 });
@@ -269,11 +267,11 @@ export const RichEditor: React.FC<RichEditorProps> = ({
         <EditorContent editor={editor} />
       </div>
 
-      {isFullscreen && onBack && (
+      {isFullscreen && (
         <button
-          onClick={onBack}
+          onClick={onToggleFullscreen}
           className="fixed bottom-6 right-6 z-50 p-3 rounded-full bg-black/20 dark:bg-white/20 backdrop-blur-md hover:bg-black/30 dark:hover:bg-white/30 transition-colors"
-          title="Back to notes"
+          title="Exit fullscreen"
         >
           <ArrowLeft size={24} className="text-white dark:text-zinc-900" />
         </button>
