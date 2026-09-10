@@ -26,6 +26,16 @@ export const saveNoteToIDB = async (note: Note) => {
   await db.put('notes', note);
 };
 
+export const saveNotesToIDB = async (notes: Note[]) => {
+  const db = await initDB();
+  const tx = db.transaction('notes', 'readwrite');
+  const store = tx.objectStore('notes');
+  for (const note of notes) {
+    store.put(note);
+  }
+  await tx.done;
+};
+
 export const getNotesFromIDB = async (): Promise<Note[]> => {
   const db = await initDB();
   const notes = await db.getAllFromIndex('notes', 'by-updated');

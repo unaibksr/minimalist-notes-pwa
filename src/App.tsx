@@ -28,9 +28,14 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     const init = async () => {
+      const localNotes = await getNotesFromIDBForUI();
+      setNotes(localNotes);
+      if (localNotes.length > 0 && !isMobile) {
+        setActiveNoteId(localNotes[0].id);
+      }
       const updatedNotes = await syncNotesWithSupabase();
       setNotes(updatedNotes);
-      if (updatedNotes.length > 0 && !isMobile) {
+      if (updatedNotes.length > 0 && !isMobile && !activeNoteId) {
         setActiveNoteId(updatedNotes[0].id);
       }
     };
@@ -62,9 +67,11 @@ export const App: React.FC = () => {
     return text || 'No additional text';
   };
 
-  const handleBackToList = async () => {
-    await syncNotesWithSupabase();
+  const handleBackToList = () => {
     setActiveNoteId(null);
+    syncNotesWithSupabase().then((updatedNotes) => {
+      setNotes(updatedNotes);
+    });
   };
 
   const handleShare = async () => {
@@ -116,8 +123,6 @@ export const App: React.FC = () => {
     await saveNoteToIDB(newNote);
     setNotes((prev) => [newNote, ...prev]);
     setActiveNoteId(newNote.id);
-    const updatedNotes = await syncNotesWithSupabase();
-    setNotes(updatedNotes);
   };
 
   const handleDeleteNote = async (id: string) => {
