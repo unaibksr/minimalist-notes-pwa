@@ -250,14 +250,14 @@ export const App: React.FC = () => {
       <main className={`flex-1 flex flex-col h-screen overflow-hidden ${!activeNoteId ? 'hidden md:flex' : ''} ${isZenMode ? 'md:flex' : ''}`}>
         {activeNote ? (
           <div
-            className="flex-1 flex flex-col h-full max-w-full p-4 md:p-8 md:px-12 overflow-y-auto"
+            className={`flex-1 flex flex-col h-full max-w-full p-4 md:p-8 md:px-12 overflow-y-auto ${isFullscreen ? 'hidden' : ''}`}
             onTouchStart={(e) => { mainTouchStartX.current = e.touches[0].clientX; }}
             onTouchEnd={(e) => {
               const diffX = mainTouchStartX.current - e.changedTouches[0].clientX;
               if (diffX > 80 && isMobile) handleBackToList();
             }}
           >
-            <div className="flex items-center justify-between pb-4 mb-4 border-b border-cream-300 dark:border-cream-800">
+            <div className={`flex items-center justify-between pb-4 mb-4 border-b border-cream-300 dark:border-cream-800 ${isFullscreen ? 'hidden' : ''}`}>
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleBackToList}
@@ -317,13 +317,15 @@ export const App: React.FC = () => {
               </div>
             </div>
 
-            <input
-              type="text"
-              value={activeNote.title}
-              onChange={(e) => handleUpdateNote('title', e.target.value)}
-              placeholder="Note Title"
-              className="text-2xl md:text-3xl font-bold bg-transparent border-none outline-none mb-4 w-full text-cream-800 dark:text-cream-200 placeholder-cream-400"
-            />
+            {!isFullscreen && (
+              <input
+                type="text"
+                value={activeNote.title}
+                onChange={(e) => handleUpdateNote('title', e.target.value)}
+                placeholder="Note Title"
+                className="text-2xl md:text-3xl font-bold bg-transparent border-none outline-none mb-4 w-full text-cream-800 dark:text-cream-200 placeholder-cream-400"
+              />
+            )}
 
             <RichEditor
               content={activeNote.content}
