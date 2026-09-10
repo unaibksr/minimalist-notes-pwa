@@ -65,7 +65,7 @@ export const RichEditor: React.FC<RichEditorProps> = ({
     editorProps: {
       attributes: {
         class:
-          'prose dark:prose-invert max-w-none focus:outline-none min-h-[calc(100vh-220px)] text-justify leading-relaxed text-cream-800 dark:text-white',
+          'tiptap max-w-none focus:outline-none min-h-[calc(100vh-220px)] text-justify leading-relaxed text-cream-800 dark:text-white',
       },
     },
   });
