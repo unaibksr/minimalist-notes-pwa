@@ -37,39 +37,39 @@
   }
 
   .btn-amber {
-    @apply bg-amber-500 hover:bg-amber-600 text-white dark:bg-amber-400 dark:text-amber-900;
+    @apply bg-amber-500 hover:bg-amber-600 text-white dark:bg-amber-400 dark:text-amber-950;
   }
 
   .btn-cream {
-    @apply bg-cream-200 hover:bg-cream-300 text-cream-800 dark:bg-cream-800 dark:text-cream-200;
+    @apply bg-cream-200 hover:bg-cream-300 text-cream-800 dark:bg-navy-800 dark:text-navy-100;
   }
 
   .border-cream {
-    @apply border border-cream-200 dark:border-cream-800;
+    @apply border border-cream-200 dark:border-navy-800;
   }
 
   .bg-app {
-    @apply bg-cream-50 dark:bg-cream-950;
+    @apply bg-cream-50 dark:bg-navy-950;
   }
 
   .bg-sidebar {
-    @apply bg-cream-100 dark:bg-cream-900;
+    @apply bg-cream-100 dark:bg-navy-900;
   }
 
   .bg-sidebar-item {
-    @apply bg-cream-100 dark:bg-cream-800;
+    @apply bg-cream-100 dark:bg-navy-800;
   }
 
   .bg-sidebar-hover {
-    @apply hover:bg-cream-200 dark:hover:bg-cream-800;
+    @apply hover:bg-cream-200 dark:hover:bg-navy-800;
   }
 
   .text-primary {
-    @apply text-cream-800 dark:text-cream-200;
+    @apply text-cream-800 dark:text-navy-100;
   }
 
   .text-secondary {
-    @apply text-cream-500 dark:text-cream-500;
+    @apply text-cream-500 dark:text-navy-400;
   }
 
   .accent-color {
