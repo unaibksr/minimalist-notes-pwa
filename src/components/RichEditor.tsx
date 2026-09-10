@@ -126,7 +126,7 @@ export const RichEditor: React.FC<RichEditorProps> = ({
   return (
     <div className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-cream-50 dark:bg-navy-950 p-6 overflow-y-auto' : ''}`}>
       {!isFullscreen && (
-        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-1 p-2 mb-4 border-b bg-cream-50/80 dark:bg-navy-950/80 backdrop-blur border-cream-300 dark:border-navy-800 rounded-lg">
+        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-1 p-2 mb-4 border-b bg-cream-50/80 dark:bg-navy-950/80 backdrop-blur border-cream-300 dark:border-navy-600 rounded-lg">
           <button
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
             className={`p-2 rounded hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('heading', { level: 1 }) ? 'bg-cream-300 dark:bg-navy-700' : ''}`}
@@ -277,7 +277,7 @@ export const RichEditor: React.FC<RichEditorProps> = ({
         </button>
       )}
 
-      <div className="flex items-center justify-between px-2 py-2 text-xs text-cream-500 dark:text-gray-400 border-t border-cream-300 dark:border-navy-800">
+      <div className="flex items-center justify-between px-2 py-2 text-xs text-cream-500 dark:text-gray-400 border-t border-cream-300 dark:border-navy-600">
         <div className="flex items-center gap-1">
           <Type size={12} className="text-amber-600 dark:text-amber-400" />
           <span>{wordCount.words} words</span>

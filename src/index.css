@@ -35,7 +35,7 @@
   }
 
   .btn-amber {
-    @apply bg-amber-500 hover:bg-amber-600 text-white dark:bg-amber-400 dark:text-amber-950;
+    @apply bg-amber-600 hover:bg-amber-700 text-amber-900 dark:bg-amber-500 dark:text-amber-950 dark:hover:bg-amber-600;
   }
 
   .btn-cream {
@@ -43,7 +43,7 @@
   }
 
   .border-cream {
-    @apply border border-cream-200 dark:border-navy-800;
+    @apply border border-cream-200 dark:border-navy-600;
   }
 
   .bg-app {

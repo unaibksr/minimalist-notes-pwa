@@ -168,8 +168,8 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-cream-50 dark:bg-navy-950 text-cream-800 dark:text-white flex flex-col md:flex-row">
-      <aside className={`w-full md:w-80 border-r border-cream-300 dark:border-navy-800 flex flex-col h-screen ${activeNoteId ? 'hidden md:flex' : ''}`}>
-        <header className="p-4 border-b border-cream-300 dark:border-navy-800 flex items-center justify-between">
+      <aside className={`w-full md:w-80 border-r border-cream-300 dark:border-navy-600 flex flex-col h-screen ${activeNoteId ? 'hidden md:flex' : ''}`}>
+        <header className="p-4 border-b border-cream-300 dark:border-navy-600 flex items-center justify-between">
           <h1 className="text-xl font-bold tracking-tight text-amber-700 dark:text-amber-400">Notes</h1>
           <div className="flex items-center gap-2">
             <button
@@ -181,7 +181,7 @@ export const App: React.FC = () => {
             </button>
             <button
               onClick={createNewNote}
-              className="p-2 bg-amber-500 text-amber-900 hover:bg-amber-600 dark:bg-amber-400 dark:text-amber-950 rounded-lg flex items-center gap-1 text-sm font-medium transition-colors"
+              className="p-2 bg-amber-600 text-amber-900 dark:bg-amber-500 dark:text-amber-950 hover:bg-amber-700 dark:hover:bg-amber-600 dark:text-amber-950 rounded-lg flex items-center gap-1 text-sm font-medium transition-colors"
             >
               <Plus size={18} />
             </button>
@@ -196,23 +196,23 @@ export const App: React.FC = () => {
               placeholder="Search notes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm bg-cream-100 dark:bg-navy-900 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-400 text-cream-800 dark:text-white placeholder-cream-500 dark:placeholder-navy-400"
+              className="w-full pl-9 pr-4 py-2 text-sm bg-cream-100 dark:bg-navy-900 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-400 text-cream-800 dark:text-white placeholder-cream-500 dark:placeholder-gray-400"
             />
           </div>
         </div>
 
-        <div className="p-3 border-b border-cream-300 dark:border-navy-800">
+        <div className="p-3 border-b border-cream-300 dark:border-navy-600">
           <p className="text-xs text-cream-500 dark:text-gray-400 mb-2">Share this link to collaborate</p>
           <button
             onClick={handleShare}
-            className="w-full flex items-center justify-center gap-1 text-xs bg-amber-500 text-amber-900 dark:bg-amber-400 dark:text-amber-950 px-2 py-1.5 rounded hover:bg-amber-600 dark:hover:bg-amber-500 transition-colors"
+            className="w-full flex items-center justify-center gap-1 text-xs bg-amber-600 text-amber-900 dark:bg-amber-500 dark:text-amber-950 px-2 py-1.5 rounded hover:bg-amber-700 dark:hover:bg-amber-600 transition-colors"
           >
             <Share2 size={12} />
             Copy share link
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto divide-y divide-cream-200 dark:divide-navy-800">
+        <div className="flex-1 overflow-y-auto divide-y divide-cream-200 dark:divide-navy-600">
           {filteredNotes.map((note) => (
             <div
               key={note.id}
@@ -254,7 +254,7 @@ export const App: React.FC = () => {
               if (diffX > 80 && isMobile) handleBackToList();
             }}
           >
-            <div className={`flex items-center justify-between pb-4 mb-4 border-b border-cream-300 dark:border-navy-800 ${isFullscreen ? 'hidden' : ''}`}>
+            <div className={`flex items-center justify-between pb-4 mb-4 border-b border-cream-300 dark:border-navy-600 ${isFullscreen ? 'hidden' : ''}`}>
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleBackToList}
@@ -320,7 +320,7 @@ export const App: React.FC = () => {
                 value={activeNote.title}
                 onChange={(e) => handleUpdateNote('title', e.target.value)}
                 placeholder="Note Title"
-                className="text-2xl md:text-3xl font-bold bg-transparent border-none outline-none mb-4 w-full text-cream-800 dark:text-white placeholder-cream-500 dark:placeholder-navy-400"
+                className="text-2xl md:text-3xl font-bold bg-transparent border-none outline-none mb-4 w-full text-cream-800 dark:text-white placeholder-cream-500 dark:placeholder-gray-400"
               />
             )}
 
