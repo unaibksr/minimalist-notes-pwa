@@ -2,27 +2,77 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
+@layer base {
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  * {
+    transition-property: background-color, border-color, color, opacity, transform;
+    transition-duration: 150ms;
+    transition-timing-function: ease-out;
+  }
 }
 
-.tiptap h1, .tiptap h2, .tiptap h3 {
-  color: #2563eb;
-}
+@layer components {
+  .tiptap h1, .tiptap h2, .tiptap h3 {
+    color: theme('colors.amber.700');
+  }
 
-.tiptap h1 {
-  font-size: 2rem;
-  font-weight: 700;
-}
+  .tiptap h1 {
+    font-size: 2rem;
+    font-weight: 700;
+  }
 
-.tiptap h2 {
-  font-size: 1.5rem;
-  font-weight: 600;
-}
+  .tiptap h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
 
-.tiptap h3 {
-  font-size: 1.25rem;
-  font-weight: 600;
+  .tiptap h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  .btn-amber {
+    @apply bg-amber-500 hover:bg-amber-600 text-white dark:bg-amber-400 dark:text-amber-900;
+  }
+
+  .btn-cream {
+    @apply bg-cream-200 hover:bg-cream-300 text-cream-800 dark:bg-cream-800 dark:text-cream-200;
+  }
+
+  .border-cream {
+    @apply border border-cream-200 dark:border-cream-800;
+  }
+
+  .bg-app {
+    @apply bg-cream-50 dark:bg-cream-950;
+  }
+
+  .bg-sidebar {
+    @apply bg-cream-100 dark:bg-cream-900;
+  }
+
+  .bg-sidebar-item {
+    @apply bg-cream-100 dark:bg-cream-800;
+  }
+
+  .bg-sidebar-hover {
+    @apply hover:bg-cream-200 dark:hover:bg-cream-800;
+  }
+
+  .text-primary {
+    @apply text-cream-800 dark:text-cream-200;
+  }
+
+  .text-secondary {
+    @apply text-cream-500 dark:text-cream-500;
+  }
+
+  .accent-color {
+    @apply text-amber-600 dark:text-amber-400;
+  }
 }

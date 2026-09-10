@@ -65,7 +65,7 @@ export const RichEditor: React.FC<RichEditorProps> = ({
     editorProps: {
       attributes: {
         class:
-          'prose dark:prose-invert max-w-none focus:outline-none min-h-[calc(100vh-220px)] text-justify leading-relaxed',
+          'prose dark:prose-invert max-w-none focus:outline-none min-h-[calc(100vh-220px)] text-justify leading-relaxed text-cream-800 dark:text-cream-200',
       },
     },
   });
@@ -124,143 +124,143 @@ export const RichEditor: React.FC<RichEditorProps> = ({
   };
 
   return (
-    <div className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-white dark:bg-zinc-900 p-6 overflow-y-auto' : ''}`}>
+    <div className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-cream-50 dark:bg-cream-950 p-6 overflow-y-auto' : ''}`}>
       {!isFullscreen && (
-        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-1 p-2 mb-4 border-b bg-white/80 dark:bg-zinc-900/80 backdrop-blur border-zinc-200 dark:border-zinc-800 rounded-lg">
-        <button
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          className={`p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 ${editor.isActive('heading', { level: 1 }) ? 'bg-zinc-200 dark:bg-zinc-700' : ''}`}
-          title="Heading 1"
-        >
-          <Heading1 size={18} />
-        </button>
-
-        <button
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={`p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 ${editor.isActive('heading', { level: 2 }) ? 'bg-zinc-200 dark:bg-zinc-700' : ''}`}
-          title="Heading 2"
-        >
-          <Heading2 size={18} />
-        </button>
-
-        <button
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          className={`p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 ${editor.isActive('heading', { level: 3 }) ? 'bg-zinc-200 dark:bg-zinc-700' : ''}`}
-          title="Heading 3"
-        >
-          <Heading3 size={18} />
-        </button>
-
-        <div className="w-px h-5 mx-1 bg-zinc-300 dark:bg-zinc-700" />
-
-        <button
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          className={`p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 ${editor.isActive('bold') ? 'bg-zinc-200 dark:bg-zinc-700' : ''}`}
-          title="Bold"
-        >
-          <Bold size={18} />
-        </button>
-
-        <button
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={`p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 ${editor.isActive('italic') ? 'bg-zinc-200 dark:bg-zinc-700' : ''}`}
-          title="Italic"
-        >
-          <Italic size={18} />
-        </button>
-
-        <div className="w-px h-5 mx-1 bg-zinc-300 dark:bg-zinc-700" />
-
-        <button
-          onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-          className={`p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 ${editor.isActive({ textAlign: 'justify' }) ? 'bg-zinc-200 dark:bg-zinc-700' : ''}`}
-          title="Justify Text"
-        >
-          <AlignJustify size={18} />
-        </button>
-
-        <button
-          onClick={() => editor.chain().focus().setTextAlign('left').run()}
-          className={`p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 ${editor.isActive({ textAlign: 'left' }) ? 'bg-zinc-200 dark:bg-zinc-700' : ''}`}
-          title="Align Left"
-        >
-          <AlignLeft size={18} />
-        </button>
-
-        <div className="w-px h-5 mx-1 bg-zinc-300 dark:bg-zinc-700" />
-
-        <div className="flex items-center gap-1 px-1">
+        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-1 p-2 mb-4 border-b bg-cream-50/80 dark:bg-cream-950/80 backdrop-blur border-cream-300 dark:border-cream-800 rounded-lg">
           <button
-            onClick={() => setFontSize((s) => Math.max(12, s - 2))}
-            className="px-2 py-1 text-xs border rounded border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            title="Decrease Font Size"
+            onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+            className={`p-2 rounded hover:bg-cream-200 dark:hover:bg-cream-800 ${editor.isActive('heading', { level: 1 }) ? 'bg-cream-300 dark:bg-cream-700' : ''}`}
+            title="Heading 1"
           >
-            A-
+            <Heading1 size={18} className="text-amber-600 dark:text-amber-400" />
           </button>
-          <span className="text-xs w-6 text-center">{fontSize}</span>
+
           <button
-            onClick={() => setFontSize((s) => Math.min(32, s + 2))}
-            className="px-2 py-1 text-xs border rounded border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            title="Increase Font Size"
+            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            className={`p-2 rounded hover:bg-cream-200 dark:hover:bg-cream-800 ${editor.isActive('heading', { level: 2 }) ? 'bg-cream-300 dark:bg-cream-700' : ''}`}
+            title="Heading 2"
           >
-            A+
+            <Heading2 size={18} className="text-amber-600 dark:text-amber-400" />
           </button>
+
+          <button
+            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+            className={`p-2 rounded hover:bg-cream-200 dark:hover:bg-cream-800 ${editor.isActive('heading', { level: 3 }) ? 'bg-cream-300 dark:bg-cream-700' : ''}`}
+            title="Heading 3"
+          >
+            <Heading3 size={18} className="text-amber-600 dark:text-amber-400" />
+          </button>
+
+          <div className="w-px h-5 mx-1 bg-cream-400 dark:bg-cream-700" />
+
+          <button
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            className={`p-2 rounded hover:bg-cream-200 dark:hover:bg-cream-800 ${editor.isActive('bold') ? 'bg-cream-300 dark:bg-cream-700' : ''}`}
+            title="Bold"
+          >
+            <Bold size={18} className="text-amber-600 dark:text-amber-400" />
+          </button>
+
+          <button
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            className={`p-2 rounded hover:bg-cream-200 dark:hover:bg-cream-800 ${editor.isActive('italic') ? 'bg-cream-300 dark:bg-cream-700' : ''}`}
+            title="Italic"
+          >
+            <Italic size={18} className="text-amber-600 dark:text-amber-400" />
+          </button>
+
+          <div className="w-px h-5 mx-1 bg-cream-400 dark:bg-cream-700" />
+
+          <button
+            onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+            className={`p-2 rounded hover:bg-cream-200 dark:hover:bg-cream-800 ${editor.isActive({ textAlign: 'justify' }) ? 'bg-cream-300 dark:bg-cream-700' : ''}`}
+            title="Justify Text"
+          >
+            <AlignJustify size={18} className="text-amber-600 dark:text-amber-400" />
+          </button>
+
+          <button
+            onClick={() => editor.chain().focus().setTextAlign('left').run()}
+            className={`p-2 rounded hover:bg-cream-200 dark:hover:bg-cream-800 ${editor.isActive({ textAlign: 'left' }) ? 'bg-cream-300 dark:bg-cream-700' : ''}`}
+            title="Align Left"
+          >
+            <AlignLeft size={18} className="text-amber-600 dark:text-amber-400" />
+          </button>
+
+          <div className="w-px h-5 mx-1 bg-cream-400 dark:bg-cream-700" />
+
+          <div className="flex items-center gap-1 px-1">
+            <button
+              onClick={() => setFontSize((s) => Math.max(12, s - 2))}
+              className="px-2 py-1 text-xs border border-cream-400 dark:border-cream-700 rounded hover:bg-cream-200 dark:hover:bg-cream-800"
+              title="Decrease Font Size"
+            >
+              A-
+            </button>
+            <span className="text-xs w-6 text-center text-cream-600 dark:text-cream-400">{fontSize}</span>
+            <button
+              onClick={() => setFontSize((s) => Math.min(32, s + 2))}
+              className="px-2 py-1 text-xs border border-cream-400 dark:border-cream-700 rounded hover:bg-cream-200 dark:hover:bg-cream-800"
+              title="Increase Font Size"
+            >
+              A+
+            </button>
+          </div>
+
+          <div className="w-px h-5 mx-1 bg-cream-400 dark:bg-cream-700" />
+
+          <button
+            onClick={cleanBlankLines}
+            className="p-2 rounded hover:bg-cream-200 dark:hover:bg-cream-800"
+            title="Remove Extra Blank Lines"
+          >
+            <Eraser size={18} className="text-amber-600 dark:text-amber-400" />
+          </button>
+
+          <div className="w-px h-5 mx-1 bg-cream-400 dark:bg-cream-700" />
+
+          <button
+            onClick={() => editor.chain().focus().undo().run()}
+            disabled={!editor.can().undo()}
+            className="p-2 rounded hover:bg-cream-200 dark:hover:bg-cream-800 disabled:opacity-40"
+            title="Undo"
+          >
+            <Undo size={18} className="text-amber-600 dark:text-amber-400" />
+          </button>
+
+          <button
+            onClick={() => editor.chain().focus().redo().run()}
+            disabled={!editor.can().redo()}
+            className="p-2 rounded hover:bg-cream-200 dark:hover:bg-cream-800 disabled:opacity-40"
+            title="Redo"
+          >
+            <Redo size={18} className="text-amber-600 dark:text-amber-400" />
+          </button>
+
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              onClick={onCopyNote}
+              className="p-2 rounded hover:bg-cream-200 dark:hover:bg-cream-800"
+              title="Copy Note"
+            >
+              <Copy size={18} className="text-amber-600 dark:text-amber-400" />
+            </button>
+            <button
+              onClick={onExportMarkdown}
+              className="p-2 rounded hover:bg-cream-200 dark:hover:bg-cream-800"
+              title="Export Markdown"
+            >
+              <Download size={18} className="text-amber-600 dark:text-amber-400" />
+            </button>
+            <button
+              onClick={onToggleFullscreen}
+              className="p-2 rounded hover:bg-cream-200 dark:hover:bg-cream-800"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Reading Mode'}
+            >
+              {isFullscreen ? <Minimize2 size={18} className="text-amber-600 dark:text-amber-400" /> : <Maximize2 size={18} className="text-amber-600 dark:text-amber-400" />}
+            </button>
+          </div>
         </div>
-
-        <div className="w-px h-5 mx-1 bg-zinc-300 dark:bg-zinc-700" />
-
-        <button
-          onClick={cleanBlankLines}
-          className="p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          title="Remove Extra Blank Lines"
-        >
-          <Eraser size={18} />
-        </button>
-
-        <div className="w-px h-5 mx-1 bg-zinc-300 dark:bg-zinc-700" />
-
-        <button
-          onClick={() => editor.chain().focus().undo().run()}
-          disabled={!editor.can().undo()}
-          className="p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-40"
-          title="Undo"
-        >
-          <Undo size={18} />
-        </button>
-
-        <button
-          onClick={() => editor.chain().focus().redo().run()}
-          disabled={!editor.can().redo()}
-          className="p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-40"
-          title="Redo"
-        >
-          <Redo size={18} />
-        </button>
-
-        <div className="ml-auto flex items-center gap-1">
-          <button
-            onClick={onCopyNote}
-            className="p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            title="Copy Note"
-          >
-            <Copy size={18} />
-          </button>
-          <button
-            onClick={onExportMarkdown}
-            className="p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            title="Export Markdown"
-          >
-            <Download size={18} />
-          </button>
-          <button
-            onClick={onToggleFullscreen}
-            className="p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Reading Mode'}
-          >
-            {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-          </button>
-        </div>
-      </div>
       )}
 
       <div style={{ fontSize: `${fontSize}px` }} className="flex-1 w-full max-w-full">
@@ -270,16 +270,16 @@ export const RichEditor: React.FC<RichEditorProps> = ({
       {isFullscreen && (
         <button
           onClick={onToggleFullscreen}
-          className="fixed bottom-6 right-6 z-50 p-3 rounded-full bg-black/20 dark:bg-white/20 backdrop-blur-md hover:bg-black/30 dark:hover:bg-white/30 transition-colors"
+          className="fixed bottom-6 right-6 z-50 p-3 rounded-full bg-amber-500/20 dark:bg-amber-400/20 backdrop-blur-md hover:bg-amber-500/30 dark:hover:bg-amber-400/30 transition-colors"
           title="Exit fullscreen"
         >
-          <ArrowLeft size={24} className="text-white dark:text-zinc-900" />
+          <ArrowLeft size={24} className="text-amber-700 dark:text-amber-300" />
         </button>
       )}
 
-      <div className="flex items-center justify-between px-2 py-2 text-xs text-zinc-400 border-t border-zinc-100 dark:border-zinc-800">
+      <div className="flex items-center justify-between px-2 py-2 text-xs text-cream-500 dark:text-cream-400 border-t border-cream-300 dark:border-cream-800">
         <div className="flex items-center gap-1">
-          <Type size={12} />
+          <Type size={12} className="text-amber-600 dark:text-amber-400" />
           <span>{wordCount.words} words</span>
         </div>
         <div>
