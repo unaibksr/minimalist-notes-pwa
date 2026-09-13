@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { getNotesFromIDB, getNotesFromIDBForUI, saveNotesToIDB } from './db';
 import type { Note } from '../types';
 
@@ -74,4 +74,28 @@ export const syncNotesWithSupabase = async (): Promise<Note[]> => {
   }
 
   return getNotesFromIDBForUI();
+};
+
+export const subscribeToNotes = (
+  client: SupabaseClient,
+  onChanged: (payload: {
+    eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+    new?: Record<string, any>;
+    old?: Record<string, any>;
+  }) => void
+): (() => void) => {
+  const channel = client
+    .channel('minimalist-notes-sync')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'notes' },
+      (payload) => {
+        onChanged(payload);
+      }
+    )
+    .subscribe();
+
+  return () => {
+    client.removeChannel(channel);
+  };
 };

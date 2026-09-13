@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Note, Theme } from './types';
 import { getNotesFromIDBForUI, saveNoteToIDB, deleteNoteFromIDB } from './lib/db';
-import { syncNotesWithSupabase } from './lib/supabase';
+import { supabase, syncNotesWithSupabase, subscribeToNotes } from './lib/supabase';
 import { RichEditor } from './components/RichEditor';
 import { Search, Plus, Trash2, Moon, Sun, Check, RefreshCw, Copy, Download, Share2 } from 'lucide-react';
 
@@ -56,6 +56,13 @@ export const App: React.FC = () => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    const unsubscribe = subscribeToNotes(supabase, (payload) => {
+      handleRealtimeChange(payload);
+    });
+    return () => { unsubscribe(); };
+  }, []);
+
   const activeNote = notes.find((n) => n.id === activeNoteId);
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -92,6 +99,41 @@ export const App: React.FC = () => {
     setRefreshing(false);
   };
 
+  const handleRealtimeChange = useCallback((payload: {
+    eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+    new?: Record<string, any>;
+    old?: Record<string, any>;
+  }) => {
+    const { eventType, new: newData, old: oldData } = payload;
+
+    if (eventType === 'INSERT' && newData) {
+      const note: Note = {
+        id: newData.id,
+        title: newData.title,
+        content: newData.content,
+        updatedAt: newData.updated_at,
+        synced: true,
+      };
+      setNotes((prev) => {
+        if (prev.some((n) => n.id === note.id)) return prev;
+        return [note, ...prev];
+      });
+    } else if (eventType === 'UPDATE' && newData) {
+      const updatedNote: Note = {
+        id: newData.id,
+        title: newData.title,
+        content: newData.content,
+        updatedAt: newData.updated_at,
+        synced: true,
+      };
+      setNotes((prev) =>
+        prev.map((n) => (n.id === updatedNote.id ? updatedNote : n))
+      );
+    } else if (eventType === 'DELETE' && oldData) {
+      setNotes((prev) => prev.filter((n) => n.id !== oldData.id));
+    }
+  }, []);
+
   const handleUpdateNote = (field: 'title' | 'content', value: string) => {
     if (!activeNoteId) return;
 
@@ -120,6 +162,7 @@ export const App: React.FC = () => {
         const payload = { ...updated, [field]: value, updatedAt: Date.now(), synced: false };
         await saveNoteToIDB(payload);
         setSaveStatus('saved');
+        syncNotesWithSupabase();
       }
     }, 1000);
   };
@@ -133,12 +176,14 @@ export const App: React.FC = () => {
       synced: false,
     };
     await saveNoteToIDB(newNote);
+    syncNotesWithSupabase();
     setNotes((prev) => [newNote, ...prev]);
     setActiveNoteId(newNote.id);
   };
 
   const handleDeleteNote = async (id: string) => {
     await deleteNoteFromIDB(id);
+    syncNotesWithSupabase();
     const filtered = notes.filter((n) => n.id !== id);
     setNotes(filtered);
     if (activeNoteId === id) {
@@ -364,7 +409,7 @@ export const App: React.FC = () => {
               <h2 className="text-xl font-semibold text-cream-700 dark:text-white mb-2">No Note Selected</h2>
               <p className="text-sm text-cream-500 dark:text-gray-400 mb-6">
                 Select a note from the sidebar or create a new one to start writing.
-                Your notes are saved automatically and sync across devices.
+                Your notes are saved automatically and synced in real time across devices.
               </p>
               <div className="flex flex-col gap-2 text-xs text-cream-400 dark:text-gray-400">
                 <p><kbd className="px-1.5 py-0.5 bg-cream-200 dark:bg-navy-800 rounded text-cream-600 dark:text-gray-300">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-cream-200 dark:bg-navy-800 rounded text-cream-600 dark:text-gray-300">B</kbd> Bold</p>
