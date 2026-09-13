@@ -15,6 +15,7 @@ export const App: React.FC = () => {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
+  const [refreshing, setRefreshing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.matchMedia('(max-width: 767px)').matches);
   
@@ -82,6 +83,13 @@ export const App: React.FC = () => {
     await navigator.clipboard.writeText(window.location.href);
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('saving'), 500);
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    const updatedNotes = await syncNotesWithSupabase();
+    setNotes(updatedNotes);
+    setRefreshing(false);
   };
 
   const handleUpdateNote = (field: 'title' | 'content', value: string) => {
@@ -178,6 +186,14 @@ export const App: React.FC = () => {
               title="Toggle Theme"
             >
               {theme === 'light' ? <Moon size={18} className="text-amber-600 dark:text-amber-400" /> : <Sun size={18} className="text-amber-600 dark:text-amber-400" />}
+            </button>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-2 rounded-lg hover:bg-cream-200 dark:hover:bg-navy-800 disabled:opacity-50 transition-colors"
+              title="Refresh / Sync"
+            >
+              <RefreshCw size={18} className={`text-amber-600 dark:text-amber-400 ${refreshing ? 'animate-spin' : ''}`} />
             </button>
             <button
               onClick={createNewNote}
@@ -297,6 +313,14 @@ export const App: React.FC = () => {
                 >
                   <Download size={14} />
                   Export
+                </button>
+                <button
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="p-1 rounded hover:bg-cream-200 dark:hover:bg-navy-800 disabled:opacity-50 transition-colors"
+                  title="Refresh / Sync"
+                >
+                  <RefreshCw size={14} className={`text-cream-500 dark:text-gray-400 ${refreshing ? 'animate-spin' : ''}`} />
                 </button>
                 <div className="flex items-center gap-1 text-xs text-cream-400 dark:text-gray-400 ml-auto">
                   {saveStatus === 'saving' ? (
