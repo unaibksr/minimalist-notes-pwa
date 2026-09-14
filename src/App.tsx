@@ -791,7 +791,7 @@ export const App: React.FC = () => {
                     </div>
                   )}
 
-                  <div className="relative hidden md:block" ref={copyMenuRef}>
+                  <div className="relative" ref={copyMenuRef}>
                     <button
                       onClick={() => setCopyMenuOpen((v) => !v)}
                       className="flex items-center gap-1 text-xs text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 bg-cream-200 dark:bg-navy-800 px-2 py-1 rounded-md transition-colors"
