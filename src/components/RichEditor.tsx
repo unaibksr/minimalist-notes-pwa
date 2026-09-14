@@ -21,8 +21,10 @@ import {
   Copy,
   Type,
   ArrowLeft,
+  FileText,
 } from 'lucide-react';
 import { MarkdownPasteHandler } from '../lib/pasteHandler';
+import { markdownToHtml, hasMarkdown } from '../lib/markdownToHtml';
 
 interface RichEditorProps {
   content: string;
@@ -123,6 +125,15 @@ export const RichEditor: React.FC<RichEditorProps> = ({
     }
   };
 
+  const handleRenderMarkdown = () => {
+    if (!editor) return;
+    const html = editor.getHTML();
+    const plainText = html.replace(/<[^>]*>/g, '');
+    if (!hasMarkdown(plainText)) return;
+    const rendered = markdownToHtml(plainText);
+    editor.commands.setContent(rendered);
+  };
+
   return (
     <div className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-cream-50 dark:bg-navy-950 p-6 overflow-y-auto' : ''}`}>
       {!isFullscreen && (
@@ -215,6 +226,14 @@ export const RichEditor: React.FC<RichEditorProps> = ({
             title="Remove Extra Blank Lines"
           >
             <Eraser size={18} className="text-amber-600 dark:text-amber-400" />
+          </button>
+
+          <button
+            onClick={handleRenderMarkdown}
+            className="p-2 rounded hover:bg-cream-200 dark:hover:bg-navy-800"
+            title="Render Markdown"
+          >
+            <FileText size={18} className="text-amber-600 dark:text-amber-400" />
           </button>
 
           <div className="w-px h-5 mx-1 bg-cream-400 dark:bg-navy-700" />
