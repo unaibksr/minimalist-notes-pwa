@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.8",
+    "@tiptap/extension-bubble-menu": "^2.2.4",
     "@tiptap/extension-color": "^2.2.4",
     "@tiptap/extension-font-family": "^2.2.4",
     "@tiptap/extension-placeholder": "^2.2.4",

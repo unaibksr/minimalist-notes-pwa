@@ -58,10 +58,10 @@ export const NoteItem = React.memo(function NoteItem({
         if (touchStartX.current - e.changedTouches[0].clientX > 80) onDelete(note.id);
       }}
       onClick={() => onSelect(note.id)}
-      className={`mx-2 my-1 px-3 py-2.5 rounded-xl cursor-pointer group relative transition-colors ${
+      className={`mx-2 my-1.5 px-3 py-2.5 rounded-xl cursor-pointer group relative border transition-all duration-150 ${
         active
-          ? 'bg-cream-200 dark:bg-navy-800 ring-1 ring-amber-500/40'
-          : 'hover:bg-cream-100 dark:hover:bg-navy-800/60'
+          ? 'bg-white dark:bg-navy-800 border-primary-500/50 ring-1 ring-primary-500/30 shadow-sm'
+          : 'bg-white dark:bg-navy-900/60 border-cream-200 dark:border-navy-800 hover:-translate-y-0.5 hover:shadow-md hover:border-cream-300 dark:hover:border-navy-700'
       }`}
     >
       <div className="flex items-start justify-between gap-2">

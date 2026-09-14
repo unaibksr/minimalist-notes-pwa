@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
 import TextStyle from '@tiptap/extension-text-style';
@@ -22,6 +22,7 @@ import {
   Type,
   ArrowLeft,
   FileText,
+  List,
 } from 'lucide-react';
 import { MarkdownPasteHandler } from '../lib/pasteHandler';
 import { markdownToHtml, hasMarkdown } from '../lib/markdownToHtml';
@@ -70,7 +71,7 @@ export const RichEditor: React.FC<RichEditorProps> = ({
     editorProps: {
       attributes: {
         class:
-          'tiptap max-w-none focus:outline-none min-h-[calc(100vh-220px)] text-justify leading-relaxed text-cream-800 dark:text-white',
+          'tiptap max-w-none focus:outline-none min-h-[calc(100vh-260px)] text-justify leading-relaxed text-base text-cream-800 dark:text-white',
       },
     },
   });
@@ -299,18 +300,57 @@ export const RichEditor: React.FC<RichEditorProps> = ({
         </div>
       )}
 
-      <div className={`flex-1 min-h-0 overflow-y-auto w-full max-w-full ${isFullscreen ? 'p-6' : 'px-4 md:px-12 py-4'}`}>
-        <div style={{ fontSize: `${fontSize}px` }} className="w-full max-w-full">
-          <EditorContent editor={editor} />
-        </div>
-
-        <div className="flex items-center justify-between pt-4 mt-4 text-xs text-cream-500 dark:text-gray-400 border-t border-cream-300 dark:border-navy-600">
-          <div className="flex items-center gap-1">
-            <Type size={12} className="text-amber-600 dark:text-amber-400" />
-            <span>{wordCount.words} words</span>
+      <div className={`flex-1 min-h-0 overflow-y-auto w-full max-w-full ${isFullscreen ? 'p-6' : 'px-4 md:px-12 pt-4 pb-24 md:pb-4'}`}>
+        <div className="max-w-3xl mx-auto w-full">
+          <div style={{ fontSize: `${fontSize}px` }} className="w-full max-w-full">
+            <BubbleMenu
+              editor={editor}
+              className="flex items-center gap-0.5 rounded-xl border border-cream-300 dark:border-navy-700 bg-cream-50 dark:bg-navy-900 shadow-lg p-1"
+            >
+              <button
+                onClick={() => editor.chain().focus().toggleBold().run()}
+                className={`p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('bold') ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'text-cream-700 dark:text-gray-200'}`}
+                title="Bold"
+                aria-label="Bold"
+              >
+                <Bold size={16} aria-hidden="true" />
+              </button>
+              <button
+                onClick={() => editor.chain().focus().toggleItalic().run()}
+                className={`p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('italic') ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'text-cream-700 dark:text-gray-200'}`}
+                title="Italic"
+                aria-label="Italic"
+              >
+                <Italic size={16} aria-hidden="true" />
+              </button>
+              <button
+                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                className={`p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('heading', { level: 2 }) ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'text-cream-700 dark:text-gray-200'}`}
+                title="Heading 2"
+                aria-label="Heading 2"
+              >
+                <Heading2 size={16} aria-hidden="true" />
+              </button>
+              <button
+                onClick={() => editor.chain().focus().toggleBulletList().run()}
+                className={`p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('bulletList') ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'text-cream-700 dark:text-gray-200'}`}
+                title="Bullet list"
+                aria-label="Bullet list"
+              >
+                <List size={16} aria-hidden="true" />
+              </button>
+            </BubbleMenu>
+            <EditorContent editor={editor} />
           </div>
-          <div>
-            <span>{wordCount.chars} characters</span>
+
+          <div className="flex items-center justify-between pt-4 mt-4 text-xs text-cream-500 dark:text-gray-400 border-t border-cream-300 dark:border-navy-600">
+            <div className="flex items-center gap-1">
+              <Type size={12} className="text-primary-600 dark:text-primary-400" aria-hidden="true" />
+              <span>{wordCount.words} words</span>
+            </div>
+            <div>
+              <span>{wordCount.chars} characters</span>
+            </div>
           </div>
         </div>
       </div>

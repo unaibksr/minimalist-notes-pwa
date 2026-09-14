@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Note, Folder, Theme, FolderFilter } from './types';
+import { Note, Folder, FolderFilter } from './types';
 import {
   getNotesFromIDBForUI,
   saveNoteToIDB,
@@ -17,15 +17,15 @@ import {
 } from './lib/supabase';
 import { htmlToMarkdown, htmlToPlainText } from './lib/markdown';
 import { pickFolderColor } from './lib/folderColors';
+import { useTheme } from './lib/useTheme';
 import { RichEditor } from './components/RichEditor';
 import { FolderBar } from './components/FolderBar';
 import { NoteItem } from './components/NoteItem';
+import { ThemeToggle } from './components/ThemeToggle';
+import { BottomNav } from './components/BottomNav';
 import {
   Search,
   Plus,
-  Moon,
-  Sun,
-  Check,
   RefreshCw,
   Copy,
   Download,
@@ -85,11 +85,7 @@ export const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState<ToastState | null>(null);
   const [online, setOnline] = useState(navigator.onLine);
-  const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem('theme') as Theme | null;
-    if (saved === 'light' || saved === 'dark') return saved;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
+  const { mode: themeMode, setMode: setThemeMode, cycleMode: cycleThemeMode } = useTheme();
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
   const [refreshing, setRefreshing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -139,15 +135,6 @@ export const App: React.FC = () => {
       window.removeEventListener('offline', off);
     };
   }, []);
-
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
 
   /**
    * Serialised sync: only one sync runs at a time. If more syncs are requested
@@ -533,7 +520,25 @@ export const App: React.FC = () => {
       : folders.find((f) => f.id === activeFolder)?.name ?? 'Folder';
 
   const iconBtn =
-    'p-2 rounded-lg text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-cream-200 dark:hover:bg-navy-800 transition-colors';
+    'p-2 rounded-lg text-cream-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-cream-200 dark:hover:bg-navy-800 transition-colors';
+
+  const statusPill = !online
+    ? {
+        dot: 'bg-amber-500',
+        label: 'Offline',
+        cls: 'text-amber-700 dark:text-amber-300 bg-amber-500/10 border-amber-500/30',
+      }
+    : saveStatus === 'saving'
+    ? {
+        dot: 'bg-primary-500 animate-pulse',
+        label: 'Saving...',
+        cls: 'text-primary-700 dark:text-primary-300 bg-primary-500/10 border-primary-500/30',
+      }
+    : {
+        dot: 'bg-emerald-500',
+        label: 'Saved',
+        cls: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border-emerald-500/30',
+      };
 
   const showFolderBadge = activeFolder === 'all';
 
@@ -552,22 +557,11 @@ export const App: React.FC = () => {
         }`}
       >
         <header className="px-4 py-3 border-b border-cream-300 dark:border-navy-600 flex items-center justify-between">
-          <h1 className="text-lg font-bold tracking-tight text-amber-700 dark:text-amber-400">
+          <h1 className="text-lg font-bold tracking-tight text-primary-700 dark:text-primary-400">
             Notes
           </h1>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-              className={iconBtn}
-              title="Toggle theme"
-              aria-label="Toggle theme"
-            >
-              {theme === 'light' ? (
-                <Moon size={18} className="text-amber-600 dark:text-amber-400" aria-hidden="true" />
-              ) : (
-                <Sun size={18} className="text-amber-600 dark:text-amber-400" aria-hidden="true" />
-              )}
-            </button>
+          <div className="flex items-center gap-1.5">
+            <ThemeToggle mode={themeMode} onChange={setThemeMode} />
             <button
               onClick={handleRefresh}
               disabled={refreshing}
@@ -578,12 +572,12 @@ export const App: React.FC = () => {
               <RefreshCw
                 size={18}
                 aria-hidden="true"
-                className={`text-amber-600 dark:text-amber-400 ${refreshing ? 'animate-spin' : ''}`}
+                className={`text-primary-600 dark:text-primary-400 ${refreshing ? 'animate-spin' : ''}`}
               />
             </button>
             <button
               onClick={createNewNote}
-              className="p-2 rounded-lg bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-500 dark:text-amber-950 dark:hover:bg-amber-600 transition-colors"
+              className="p-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-500 dark:text-primary-950 dark:hover:bg-primary-600 transition-colors"
               title="New note"
               aria-label="New note"
             >
@@ -632,7 +626,7 @@ export const App: React.FC = () => {
           onDelete={handleDeleteFolder}
         />
 
-        <div className="flex-1 min-h-0 overflow-y-auto py-1">
+        <div className="flex-1 min-h-0 overflow-y-auto pt-1 pb-20 md:pb-1">
           {visibleNotes.length === 0 ? (
             <div className="px-6 py-12 text-center">
               <Inbox size={26} className="mx-auto mb-3 text-cream-300 dark:text-navy-600" aria-hidden="true" />
@@ -789,33 +783,27 @@ export const App: React.FC = () => {
                     />
                   </button>
                   <div
-                    className="flex items-center gap-1 text-xs text-cream-400 dark:text-gray-500"
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${statusPill.cls}`}
+                    role="status"
                     aria-live="polite"
                   >
-                    {saveStatus === 'saving' ? (
-                      <>
-                        <RefreshCw className="animate-spin" size={12} aria-hidden="true" />
-                        <span>Saving...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Check className="text-green-500" size={12} aria-hidden="true" />
-                        <span>Saved</span>
-                      </>
-                    )}
+                    <span className={`w-1.5 h-1.5 rounded-full ${statusPill.dot}`} aria-hidden="true" />
+                    <span>{statusPill.label}</span>
                   </div>
                 </div>
               </div>
 
               {!isFullscreen && (
-                <input
-                  type="text"
-                  value={activeNote.title}
-                  onChange={(e) => handleUpdateNote('title', e.target.value)}
-                  placeholder="Note Title"
-                  aria-label="Note title"
-                  className="text-2xl md:text-3xl font-bold bg-transparent border-none outline-none mb-3 w-full text-cream-800 dark:text-white placeholder-cream-400 dark:placeholder-gray-600"
-                />
+                <div className="max-w-3xl mx-auto w-full">
+                  <input
+                    type="text"
+                    value={activeNote.title}
+                    onChange={(e) => handleUpdateNote('title', e.target.value)}
+                    placeholder="Note Title"
+                    aria-label="Note title"
+                    className="text-2xl md:text-3xl font-bold bg-transparent border-none outline-none mb-3 w-full text-cream-800 dark:text-white placeholder-cream-400 dark:placeholder-gray-600"
+                  />
+                </div>
               )}
             </div>
 
@@ -885,7 +873,7 @@ export const App: React.FC = () => {
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 px-4 py-2 rounded-full text-sm font-medium bg-cream-800 text-cream-50 dark:bg-cream-100 dark:text-cream-900 shadow-lg"
+          className="fixed bottom-20 md:bottom-5 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 px-4 py-2 rounded-full text-sm font-medium bg-cream-800 text-cream-50 dark:bg-cream-100 dark:text-cream-900 shadow-lg"
         >
           <span>{toast.message}</span>
           {toast.actionLabel && (
@@ -901,6 +889,13 @@ export const App: React.FC = () => {
           )}
         </div>
       )}
+
+      <BottomNav
+        onNotes={handleBackToList}
+        onNewNote={createNewNote}
+        themeMode={themeMode}
+        onCycleTheme={cycleThemeMode}
+      />
     </div>
   );
 };

@@ -28,18 +28,35 @@
   }
 
   ::selection {
-    background-color: theme('colors.amber.200');
-    color: theme('colors.cream.900');
+    background-color: theme('colors.primary.200');
+    color: theme('colors.primary.950');
   }
 }
 
 @layer components {
-  .tiptap h1, .tiptap h2, .tiptap h3 {
-    color: theme('colors.amber.700');
+  /* Each heading level gets its own colour, in light and dark mode. */
+  .tiptap h1 {
+    color: theme('colors.primary.700');
   }
 
-  .dark .tiptap h1, .dark .tiptap h2, .dark .tiptap h3 {
-    color: theme('colors.amber.400');
+  .dark .tiptap h1 {
+    color: theme('colors.primary.300');
+  }
+
+  .tiptap h2 {
+    color: theme('colors.indigo.600');
+  }
+
+  .dark .tiptap h2 {
+    color: theme('colors.indigo.300');
+  }
+
+  .tiptap h3 {
+    color: theme('colors.teal.700');
+  }
+
+  .dark .tiptap h3 {
+    color: theme('colors.teal.300');
   }
 
   .tiptap h1 {

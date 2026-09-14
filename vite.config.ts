@@ -44,6 +44,7 @@ export default defineConfig({
           if (id.includes('@tiptap') || id.includes('prosemirror')) return 'tiptap';
           if (id.includes('@supabase')) return 'supabase';
           if (id.includes('turndown')) return 'markdown';
+          if (id.includes('lucide-react')) return 'icons';
           if (id.includes('react-dom') || id.includes('scheduler') || /[\\/]react[\\/]/.test(id)) {
             return 'react';
           }
