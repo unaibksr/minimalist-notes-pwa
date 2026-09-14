@@ -40,7 +40,7 @@
   }
 
   .dark .tiptap h1 {
-    color: theme('colors.primary.300');
+    color: #7dd3fc; /* sky-300 — bright cyan-blue on the dark surface */
   }
 
   .tiptap h2 {
@@ -48,7 +48,7 @@
   }
 
   .dark .tiptap h2 {
-    color: theme('colors.indigo.300');
+    color: #c4b5fd; /* violet-300 — clear lavender separation */
   }
 
   .tiptap h3 {
@@ -56,7 +56,7 @@
   }
 
   .dark .tiptap h3 {
-    color: theme('colors.teal.300');
+    color: #6ee7b7; /* emerald-300 — vivid mint */
   }
 
   .tiptap h1 {
