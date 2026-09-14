@@ -5,15 +5,27 @@ import type { Note } from '../types';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
-  db: { schema: 'public' },
-  global: { headers: { 'x-client-name': 'minimalist-notes' } },
-});
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+export let supabase: SupabaseClient<any, any, any> | null = null;
+
+if (isSupabaseConfigured) {
+  try {
+    supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
+      db: { schema: 'public' },
+      global: { headers: { 'x-client-name': 'minimalist-notes' } },
+    });
+  } catch {
+    supabase = null;
+  }
+}
 
 let lastSyncTimestamp = 0;
 
 export const syncNotesWithSupabase = async (): Promise<Note[]> => {
+  const client = supabase;
+  if (!client) return getNotesFromIDBForUI();
   const localNotes = await getNotesFromIDB();
   const unSynced = localNotes.filter((n) => !n.synced);
 
@@ -21,7 +33,7 @@ export const syncNotesWithSupabase = async (): Promise<Note[]> => {
     const upsertPromises = unSynced
       .filter((n) => !n.deleted)
       .map((note) =>
-        supabase.from('notes').upsert({
+        client.from('notes').upsert({
           id: note.id,
           title: note.title,
           content: note.content,
@@ -31,7 +43,7 @@ export const syncNotesWithSupabase = async (): Promise<Note[]> => {
 
     const deletePromises = unSynced
       .filter((n) => n.deleted)
-      .map((note) => supabase.from('notes').delete().eq('id', note.id));
+      .map((note) => client.from('notes').delete().eq('id', note.id));
 
     await Promise.all([...upsertPromises, ...deletePromises]);
 
@@ -41,7 +53,7 @@ export const syncNotesWithSupabase = async (): Promise<Note[]> => {
     await saveNotesToIDB(unSynced);
   }
 
-  const { data: remoteNotes } = await supabase
+  const { data: remoteNotes } = await client
     .from('notes')
     .select('id,title,content,updated_at')
     .gt('updated_at', lastSyncTimestamp);
@@ -77,25 +89,31 @@ export const syncNotesWithSupabase = async (): Promise<Note[]> => {
 };
 
 export const subscribeToNotes = (
-  client: SupabaseClient,
+  client: SupabaseClient | null,
   onChanged: (payload: {
     eventType: 'INSERT' | 'UPDATE' | 'DELETE';
     new?: Record<string, any>;
     old?: Record<string, any>;
   }) => void
 ): (() => void) => {
-  const channel = client
-    .channel('minimalist-notes-sync')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'notes' },
-      (payload) => {
-        onChanged(payload);
-      }
-    )
-    .subscribe();
+  if (!client) return () => {};
 
-  return () => {
-    client.removeChannel(channel);
-  };
+  try {
+    const channel = client
+      .channel('minimalist-notes-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notes' },
+        (payload) => {
+          onChanged(payload);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      client.removeChannel(channel);
+    };
+  } catch {
+    return () => {};
+  }
 };

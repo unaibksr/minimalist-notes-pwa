@@ -57,9 +57,14 @@ export const App: React.FC = () => {
   }, [theme]);
 
   useEffect(() => {
-    const unsubscribe = subscribeToNotes(supabase, (payload) => {
-      handleRealtimeChange(payload);
-    });
+    let unsubscribe = () => {};
+    try {
+      unsubscribe = subscribeToNotes(supabase, (payload) => {
+        handleRealtimeChange(payload);
+      });
+    } catch {
+      unsubscribe = () => {};
+    }
     return () => { unsubscribe(); };
   }, []);
 
