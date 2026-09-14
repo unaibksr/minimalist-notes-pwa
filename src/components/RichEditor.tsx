@@ -135,9 +135,11 @@ export const RichEditor: React.FC<RichEditorProps> = ({
   };
 
   return (
-    <div className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-cream-50 dark:bg-navy-950 p-6 overflow-y-auto' : ''}`}>
+    <div className={`flex flex-col ${isFullscreen ? 'fixed inset-0 z-50 bg-cream-50 dark:bg-navy-950 overflow-y-auto' : ''}`}>
       {!isFullscreen && (
-        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-1 p-2 mb-4 border-b bg-cream-50/80 dark:bg-navy-950/80 backdrop-blur border-cream-300 dark:border-navy-600 rounded-lg">
+        <div className="sticky top-0 z-20 shrink-0 bg-cream-50/95 dark:bg-navy-950/95 backdrop-blur border-b border-cream-300 dark:border-navy-600">
+          <div className="px-4 md:px-12 py-2">
+            <div className="flex flex-wrap items-center gap-1 p-2 border border-cream-300 dark:border-navy-600 bg-cream-50 dark:bg-navy-900 rounded-xl shadow-sm">
           <button
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
             className={`p-2 rounded hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('heading', { level: 1 }) ? 'bg-cream-300 dark:bg-navy-700' : ''}`}
@@ -279,11 +281,25 @@ export const RichEditor: React.FC<RichEditorProps> = ({
               {isFullscreen ? <Minimize2 size={18} className="text-amber-600 dark:text-amber-400" /> : <Maximize2 size={18} className="text-amber-600 dark:text-amber-400" />}
             </button>
           </div>
+            </div>
+          </div>
         </div>
       )}
 
-      <div style={{ fontSize: `${fontSize}px` }} className="flex-1 w-full max-w-full">
-        <EditorContent editor={editor} />
+      <div className={`flex flex-col flex-1 min-h-0 w-full max-w-full ${isFullscreen ? 'p-6' : 'px-4 md:px-12 pt-4 pb-2'}`}>
+        <div style={{ fontSize: `${fontSize}px` }} className="flex-1 w-full max-w-full">
+          <EditorContent editor={editor} />
+        </div>
+
+        <div className="flex items-center justify-between pt-2 mt-2 text-xs text-cream-500 dark:text-gray-400 border-t border-cream-300 dark:border-navy-600">
+          <div className="flex items-center gap-1">
+            <Type size={12} className="text-amber-600 dark:text-amber-400" />
+            <span>{wordCount.words} words</span>
+          </div>
+          <div>
+            <span>{wordCount.chars} characters</span>
+          </div>
+        </div>
       </div>
 
       {isFullscreen && (
@@ -295,16 +311,6 @@ export const RichEditor: React.FC<RichEditorProps> = ({
           <ArrowLeft size={24} className="text-amber-700 dark:text-amber-200" />
         </button>
       )}
-
-      <div className="flex items-center justify-between px-2 py-2 text-xs text-cream-500 dark:text-gray-400 border-t border-cream-300 dark:border-navy-600">
-        <div className="flex items-center gap-1">
-          <Type size={12} className="text-amber-600 dark:text-amber-400" />
-          <span>{wordCount.words} words</span>
-        </div>
-        <div>
-          <span>{wordCount.chars} characters</span>
-        </div>
-      </div>
     </div>
   );
 };

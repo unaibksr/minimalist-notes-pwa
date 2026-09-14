@@ -1,6 +1,13 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { getNotesFromIDB, getNotesFromIDBForUI, saveNotesToIDB } from './db';
-import type { Note } from '../types';
+import {
+  getNotesFromIDB,
+  getNotesFromIDBForUI,
+  saveNotesToIDB,
+  getFoldersFromIDB,
+  getFoldersFromIDBForUI,
+  saveFoldersToIDB,
+} from './db';
+import type { Note, Folder } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -23,47 +30,123 @@ if (isSupabaseConfigured) {
 
 let lastSyncTimestamp = 0;
 
-export const syncNotesWithSupabase = async (): Promise<Note[]> => {
-  const client = supabase;
-  if (!client) return getNotesFromIDBForUI();
-  const localNotes = await getNotesFromIDB();
-  const unSynced = localNotes.filter((n) => !n.synced);
+export interface SupabaseCapabilities {
+  foldersTable: boolean;
+  noteFolderColumn: boolean;
+}
 
-  if (unSynced.length > 0) {
-    const upsertPromises = unSynced
+let capabilities: SupabaseCapabilities | null = null;
+
+export const detectSupabaseCapabilities = async (): Promise<SupabaseCapabilities> => {
+  if (capabilities) return capabilities;
+  const client = supabase;
+  if (!client) {
+    capabilities = { foldersTable: false, noteFolderColumn: false };
+    return capabilities;
+  }
+  const result: SupabaseCapabilities = { foldersTable: false, noteFolderColumn: false };
+  try {
+    const { error } = await client.from('folders').select('id').limit(1);
+    result.foldersTable = !error;
+  } catch {
+    result.foldersTable = false;
+  }
+  try {
+    const { error } = await client.from('notes').select('folder_id').limit(1);
+    result.noteFolderColumn = !error;
+  } catch {
+    result.noteFolderColumn = false;
+  }
+  capabilities = result;
+  return result;
+};
+
+export interface SyncResult {
+  notes: Note[];
+  folders: Folder[];
+}
+
+export const syncWithSupabase = async (): Promise<SyncResult> => {
+  const client = supabase;
+  if (!client) {
+    return {
+      notes: await getNotesFromIDBForUI(),
+      folders: await getFoldersFromIDBForUI(),
+    };
+  }
+
+  const caps = await detectSupabaseCapabilities();
+
+  const localNotes = await getNotesFromIDB();
+  const unSyncedNotes = localNotes.filter((n) => !n.synced);
+
+  if (unSyncedNotes.length > 0) {
+    const upsertPromises = unSyncedNotes
       .filter((n) => !n.deleted)
-      .map((note) =>
-        client.from('notes').upsert({
+      .map((note) => {
+        const row: Record<string, any> = {
           id: note.id,
           title: note.title,
           content: note.content,
           updated_at: note.updatedAt,
-        })
-      );
+        };
+        if (caps.noteFolderColumn) row.folder_id = note.folderId ?? null;
+        return client.from('notes').upsert(row);
+      });
 
-    const deletePromises = unSynced
+    const deletePromises = unSyncedNotes
       .filter((n) => n.deleted)
       .map((note) => client.from('notes').delete().eq('id', note.id));
 
     await Promise.all([...upsertPromises, ...deletePromises]);
 
-    for (const note of unSynced) {
+    for (const note of unSyncedNotes) {
       note.synced = true;
     }
-    await saveNotesToIDB(unSynced);
+    await saveNotesToIDB(unSyncedNotes);
   }
+
+  if (caps.foldersTable) {
+    const localFolders = await getFoldersFromIDB();
+    const unSyncedFolders = localFolders.filter((f) => !f.synced);
+    if (unSyncedFolders.length > 0) {
+      const upsertPromises = unSyncedFolders
+        .filter((f) => !f.deleted)
+        .map((folder) =>
+          client.from('folders').upsert({
+            id: folder.id,
+            name: folder.name,
+            updated_at: folder.updatedAt,
+          })
+        );
+
+      const deletePromises = unSyncedFolders
+        .filter((f) => f.deleted)
+        .map((folder) => client.from('folders').delete().eq('id', folder.id));
+
+      await Promise.all([...upsertPromises, ...deletePromises]);
+
+      for (const folder of unSyncedFolders) {
+        folder.synced = true;
+      }
+      await saveFoldersToIDB(unSyncedFolders);
+    }
+  }
+
+  const noteColumns = caps.noteFolderColumn
+    ? 'id,title,content,updated_at,folder_id'
+    : 'id,title,content,updated_at';
 
   const { data: remoteNotes } = await client
     .from('notes')
-    .select('id,title,content,updated_at')
+    .select(noteColumns)
     .gt('updated_at', lastSyncTimestamp);
-
-  lastSyncTimestamp = Date.now();
 
   if (remoteNotes && remoteNotes.length > 0) {
     const notesToSave: Note[] = [];
-    for (const rNote of remoteNotes) {
+    for (const rNote of remoteNotes as any[]) {
       const local = localNotes.find((n) => n.id === rNote.id);
+      const remoteFolderId = caps.noteFolderColumn ? (rNote.folder_id ?? null) : null;
       if (!local) {
         notesToSave.push({
           id: rNote.id,
@@ -71,11 +154,13 @@ export const syncNotesWithSupabase = async (): Promise<Note[]> => {
           content: rNote.content,
           updatedAt: rNote.updated_at,
           synced: true,
+          folderId: remoteFolderId,
         });
       } else if (!local.deleted && local.updatedAt < rNote.updated_at) {
         local.title = rNote.title;
         local.content = rNote.content;
         local.updatedAt = rNote.updated_at;
+        local.folderId = remoteFolderId;
         local.synced = true;
         notesToSave.push(local);
       }
@@ -85,30 +170,80 @@ export const syncNotesWithSupabase = async (): Promise<Note[]> => {
     }
   }
 
-  return getNotesFromIDBForUI();
+  if (caps.foldersTable) {
+    const { data: remoteFolders } = await client
+      .from('folders')
+      .select('id,name,updated_at')
+      .gt('updated_at', lastSyncTimestamp);
+
+    if (remoteFolders && remoteFolders.length > 0) {
+      const localFolders = await getFoldersFromIDB();
+      const foldersToSave: Folder[] = [];
+      for (const rFolder of remoteFolders as any[]) {
+        const local = localFolders.find((f) => f.id === rFolder.id);
+        if (!local) {
+          foldersToSave.push({
+            id: rFolder.id,
+            name: rFolder.name,
+            updatedAt: rFolder.updated_at,
+            synced: true,
+          });
+        } else if (!local.deleted && local.updatedAt < rFolder.updated_at) {
+          local.name = rFolder.name;
+          local.updatedAt = rFolder.updated_at;
+          local.synced = true;
+          foldersToSave.push(local);
+        }
+      }
+      if (foldersToSave.length > 0) {
+        await saveFoldersToIDB(foldersToSave);
+      }
+    }
+  }
+
+  lastSyncTimestamp = Date.now();
+
+  return {
+    notes: await getNotesFromIDBForUI(),
+    folders: await getFoldersFromIDBForUI(),
+  };
 };
 
-export const subscribeToNotes = (
+type ChangeHandler = (payload: {
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+  new?: Record<string, any>;
+  old?: Record<string, any>;
+}) => void;
+
+export const subscribeToRealtime = (
   client: SupabaseClient | null,
-  onChanged: (payload: {
-    eventType: 'INSERT' | 'UPDATE' | 'DELETE';
-    new?: Record<string, any>;
-    old?: Record<string, any>;
-  }) => void
+  handlers: { onNote: ChangeHandler; onFolder: ChangeHandler },
+  options: { folders: boolean }
 ): (() => void) => {
   if (!client) return () => {};
 
   try {
-    const channel = client
+    let channel = client
       .channel('minimalist-notes-sync')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'notes' },
         (payload) => {
-          onChanged(payload);
+          handlers.onNote(payload as any);
         }
-      )
-      .subscribe();
+      );
+
+    if (options.folders) {
+      channel = channel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'folders' },
+        (payload) => {
+          handlers.onFolder(payload as any);
+        }
+      );
+    }
+
+    channel.subscribe();
 
     return () => {
       client.removeChannel(channel);
