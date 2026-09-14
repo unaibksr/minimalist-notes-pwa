@@ -11,6 +11,7 @@ import {
   Heading2,
   Heading3,
   AlignJustify,
+  AlignCenter,
   AlignLeft,
   Undo,
   Redo,
@@ -204,6 +205,14 @@ export const RichEditor: React.FC<RichEditorProps> = ({
             title="Justify Text"
           >
             <AlignJustify size={18} className="text-amber-600 dark:text-amber-400" />
+          </button>
+
+          <button
+            onClick={() => editor.chain().focus().setTextAlign('center').run()}
+            className={`p-2 rounded hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive({ textAlign: 'center' }) ? 'bg-cream-300 dark:bg-navy-700' : ''}`}
+            title="Center Text"
+          >
+            <AlignCenter size={18} className="text-amber-600 dark:text-amber-400" />
           </button>
 
           <button

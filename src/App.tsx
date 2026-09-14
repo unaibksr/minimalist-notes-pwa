@@ -16,7 +16,7 @@ import {
   detectSupabaseCapabilities,
 } from './lib/supabase';
 import { htmlToMarkdown, htmlToPlainText } from './lib/markdown';
-import { pickFolderColor } from './lib/folderColors';
+import { folderColorClasses, pickFolderColor } from './lib/folderColors';
 import { useTheme } from './lib/useTheme';
 import { RichEditor } from './components/RichEditor';
 import { FolderBar } from './components/FolderBar';
@@ -28,6 +28,7 @@ import {
   Plus,
   RefreshCw,
   Copy,
+  CopyPlus,
   Download,
   Share2,
   Folder as FolderIcon,
@@ -93,6 +94,8 @@ export const App: React.FC = () => {
 
   const mainTouchStartX = useRef(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyMenuRef = useRef<HTMLDivElement>(null);
+  const [copyMenuOpen, setCopyMenuOpen] = useState(false);
   const notesRef = useRef<Note[]>([]);
   const activeNoteIdRef = useRef<string | null>(null);
   const syncRunning = useRef(false);
@@ -135,6 +138,24 @@ export const App: React.FC = () => {
       window.removeEventListener('offline', off);
     };
   }, []);
+
+  useEffect(() => {
+    if (!copyMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (copyMenuRef.current && !copyMenuRef.current.contains(e.target as Node)) {
+        setCopyMenuOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCopyMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [copyMenuOpen]);
 
   /**
    * Serialised sync: only one sync runs at a time. If more syncs are requested
@@ -433,6 +454,31 @@ export const App: React.FC = () => {
       runSync();
     },
     [runSync, showToast]
+  );
+
+  const handleCopyNoteToFolder = useCallback(
+    async (folderId: string | null) => {
+      const id = activeNoteIdRef.current;
+      const original = notesRef.current.find((n) => n.id === id);
+      if (!original) return;
+      const duplicate: Note = {
+        id: crypto.randomUUID(),
+        title: original.title,
+        content: original.content,
+        updatedAt: Date.now(),
+        synced: false,
+        folderId,
+      };
+      await saveNoteToIDB(duplicate);
+      setNotes((prev) => [duplicate, ...prev]);
+      setCopyMenuOpen(false);
+      const targetLabel = folderId
+        ? foldersById[folderId]?.name ?? 'folder'
+        : 'Unfiled';
+      showToast(`Copied to ${targetLabel}`);
+      runSync();
+    },
+    [foldersById, runSync, showToast]
   );
 
   const handleCreateFolder = useCallback(
@@ -744,6 +790,57 @@ export const App: React.FC = () => {
                       </select>
                     </div>
                   )}
+
+                  <div className="relative hidden md:block" ref={copyMenuRef}>
+                    <button
+                      onClick={() => setCopyMenuOpen((v) => !v)}
+                      className="flex items-center gap-1 text-xs text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 bg-cream-200 dark:bg-navy-800 px-2 py-1 rounded-md transition-colors"
+                      title="Copy note to folder"
+                      aria-label="Copy note to folder"
+                      aria-expanded={copyMenuOpen}
+                      aria-haspopup="menu"
+                    >
+                      <CopyPlus size={14} aria-hidden="true" />
+                      Copy to
+                    </button>
+                    {copyMenuOpen && (
+                      <div
+                        role="menu"
+                        className="absolute right-0 top-full mt-1 z-30 min-w-[200px] rounded-lg border border-cream-300 dark:border-navy-600 bg-cream-50 dark:bg-navy-900 shadow-lg p-1"
+                      >
+                        <button
+                          role="menuitem"
+                          onClick={() => handleCopyNoteToFolder(null)}
+                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800 text-sm text-cream-800 dark:text-white"
+                        >
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0 bg-cream-400 dark:bg-gray-500"
+                            aria-hidden="true"
+                          />
+                          <span className="truncate flex-1 text-left">Unfiled</span>
+                        </button>
+                        {folders.map((f) => (
+                          <button
+                            key={f.id}
+                            role="menuitem"
+                            onClick={() => handleCopyNoteToFolder(f.id)}
+                            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800 text-sm text-cream-800 dark:text-white"
+                          >
+                            <span
+                              className={`w-2 h-2 rounded-full shrink-0 ${folderColorClasses(f.color).dot}`}
+                              aria-hidden="true"
+                            />
+                            <span className="truncate flex-1 text-left">{f.name}</span>
+                          </button>
+                        ))}
+                        {folders.length === 0 && (
+                          <div className="px-2 py-2 text-xs text-cream-500 dark:text-gray-400">
+                            No folders yet — create one to organize notes.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   <button
                     onClick={handleShare}
