@@ -32,11 +32,7 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  });
-}
+// The service worker is registered by vite-plugin-pwa (see vite.config.ts).
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

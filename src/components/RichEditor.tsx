@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
@@ -27,6 +27,7 @@ import { MarkdownPasteHandler } from '../lib/pasteHandler';
 import { markdownToHtml, hasMarkdown } from '../lib/markdownToHtml';
 
 interface RichEditorProps {
+  noteId: string;
   content: string;
   onChange: (content: string) => void;
   isFullscreen: boolean;
@@ -36,6 +37,7 @@ interface RichEditorProps {
 }
 
 export const RichEditor: React.FC<RichEditorProps> = ({
+  noteId,
   content,
   onChange,
   isFullscreen,
@@ -45,6 +47,7 @@ export const RichEditor: React.FC<RichEditorProps> = ({
 }) => {
   const [fontSize, setFontSize] = useState<number>(16);
   const [wordCount, setWordCount] = useState({ words: 0, chars: 0 });
+  const loadedNoteId = useRef<string | null>(null);
 
   const editor = useEditor({
     extensions: [
@@ -73,10 +76,20 @@ export const RichEditor: React.FC<RichEditorProps> = ({
   });
 
   useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content);
+    if (!editor) return;
+    // Load fresh content only when switching notes, or when an external change
+    // (e.g. a collaborator's edit) arrives while we are not actively typing.
+    if (loadedNoteId.current !== noteId) {
+      loadedNoteId.current = noteId;
+      if (content !== editor.getHTML()) {
+        editor.commands.setContent(content, false);
+      }
+      return;
     }
-  }, [content, editor]);
+    if (!editor.isFocused && content !== editor.getHTML()) {
+      editor.commands.setContent(content, false);
+    }
+  }, [content, editor, noteId]);
 
   useEffect(() => {
     if (!editor) return;

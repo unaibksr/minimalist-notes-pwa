@@ -14,12 +14,13 @@ import {
   subscribeToRealtime,
   detectSupabaseCapabilities,
 } from './lib/supabase';
+import { htmlToMarkdown, htmlToPlainText } from './lib/markdown';
 import { RichEditor } from './components/RichEditor';
 import { FolderBar } from './components/FolderBar';
+import { NoteItem } from './components/NoteItem';
 import {
   Search,
   Plus,
-  Trash2,
   Moon,
   Sun,
   Check,
@@ -31,18 +32,10 @@ import {
   X,
   FilePlus2,
   Inbox,
+  WifiOff,
 } from 'lucide-react';
 
 const isMobileViewport = () => window.matchMedia('(max-width: 767px)').matches;
-
-const formatDate = (ts: number) => {
-  const d = new Date(ts);
-  const now = new Date();
-  if (d.toDateString() === now.toDateString()) {
-    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  }
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-};
 
 const filterNotes = (list: Note[], activeFolder: FolderFilter, query: string) => {
   const q = query.trim().toLowerCase();
@@ -55,11 +48,17 @@ const filterNotes = (list: Note[], activeFolder: FolderFilter, query: string) =>
         : n.folderId === activeFolder;
     if (!inFolder) return false;
     if (!q) return true;
-    return (
-      n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)
-    );
+    if (n.title.toLowerCase().includes(q)) return true;
+    // Content is HTML; compare against the visible text only.
+    return htmlToPlainText(n.content).toLowerCase().includes(q);
   });
 };
+
+interface ToastState {
+  message: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}
 
 export const App: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -67,7 +66,8 @@ export const App: React.FC = () => {
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [activeFolder, setActiveFolder] = useState<FolderFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const [online, setOnline] = useState(navigator.onLine);
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('theme') as Theme | null;
     if (saved === 'light' || saved === 'dark') return saved;
@@ -78,14 +78,31 @@ export const App: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMobile, setIsMobile] = useState(isMobileViewport());
 
-  const touchStartX = useRef<number>(0);
-  const mainTouchStartX = useRef<number>(0);
+  const mainTouchStartX = useRef(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notesRef = useRef<Note[]>([]);
+  const activeNoteIdRef = useRef<string | null>(null);
+  const syncRunning = useRef(false);
+  const syncPending = useRef(false);
+  const toastTimer = useRef<number | null>(null);
 
-  const showToast = useCallback((message: string) => {
-    setToast(message);
-    window.setTimeout(() => setToast(null), 1800);
-  }, []);
+  useEffect(() => {
+    notesRef.current = notes;
+  }, [notes]);
+
+  useEffect(() => {
+    activeNoteIdRef.current = activeNoteId;
+  }, [activeNoteId]);
+
+  const showToast = useCallback(
+    (message: string, opts?: { actionLabel?: string; onAction?: () => void; duration?: number }) => {
+      if (toastTimer.current) window.clearTimeout(toastTimer.current);
+      const duration = opts?.duration ?? 1800;
+      setToast({ message, actionLabel: opts?.actionLabel, onAction: opts?.onAction });
+      toastTimer.current = window.setTimeout(() => setToast(null), duration);
+    },
+    []
+  );
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 767px)');
@@ -96,6 +113,17 @@ export const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => {
+      window.removeEventListener('online', on);
+      window.removeEventListener('offline', off);
+    };
+  }, []);
+
+  useEffect(() => {
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
@@ -103,6 +131,38 @@ export const App: React.FC = () => {
     }
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  /**
+   * Serialised sync: only one sync runs at a time. If more syncs are requested
+   * while one is in flight, they are coalesced into a single trailing sync so we
+   * can never interleave pulls/writes or clobber newer state.
+   */
+  const runSync = useCallback(async () => {
+    if (!supabase) {
+      const localNotes = await getNotesFromIDBForUI();
+      const localFolders = await getFoldersFromIDBForUI();
+      setNotes(localNotes);
+      setFolders(localFolders);
+      return;
+    }
+    if (syncRunning.current) {
+      syncPending.current = true;
+      return;
+    }
+    syncRunning.current = true;
+    try {
+      do {
+        syncPending.current = false;
+        const result = await syncWithSupabase();
+        setNotes(result.notes);
+        setFolders(result.folders);
+      } while (syncPending.current);
+    } catch (err) {
+      console.warn('Sync failed', err);
+    } finally {
+      syncRunning.current = false;
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,19 +175,18 @@ export const App: React.FC = () => {
       const mobile = isMobileViewport();
       if (!mobile && localNotes.length > 0) setActiveNoteId(localNotes[0].id);
 
-      const result = await syncWithSupabase();
+      await runSync();
       if (cancelled) return;
-      setNotes(result.notes);
-      setFolders(result.folders);
-      if (!mobile && result.notes.length > 0) {
-        setActiveNoteId((prev) => prev ?? result.notes[0].id);
-      }
+      setActiveNoteId((prev) => {
+        if (prev && notesRef.current.some((n) => n.id === prev)) return prev;
+        return !mobile && notesRef.current.length > 0 ? notesRef.current[0].id : prev;
+      });
     };
     init();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [runSync]);
 
   const handleNoteChange = useCallback(
     (payload: {
@@ -136,29 +195,36 @@ export const App: React.FC = () => {
       old?: Record<string, any>;
     }) => {
       const { eventType, new: newData, old: oldData } = payload;
-      if (eventType === 'INSERT' && newData) {
-        const note: Note = {
-          id: newData.id,
-          title: newData.title,
-          content: newData.content,
-          updatedAt: newData.updated_at,
-          synced: true,
-          folderId: newData.folder_id ?? null,
-        };
-        setNotes((prev) => (prev.some((n) => n.id === note.id) ? prev : [note, ...prev]));
-      } else if (eventType === 'UPDATE' && newData) {
-        const updated: Note = {
-          id: newData.id,
-          title: newData.title,
-          content: newData.content,
-          updatedAt: newData.updated_at,
-          synced: true,
-          folderId: newData.folder_id ?? null,
-        };
-        setNotes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
-      } else if (eventType === 'DELETE' && oldData) {
+
+      if (eventType === 'DELETE' && oldData) {
         setNotes((prev) => prev.filter((n) => n.id !== oldData.id));
+        return;
       }
+      if (!newData) return;
+
+      const incoming: Note = {
+        id: newData.id,
+        title: newData.title,
+        content: newData.content,
+        updatedAt: newData.updated_at,
+        synced: true,
+        folderId: newData.folder_id ?? null,
+      };
+
+      if (eventType === 'INSERT') {
+        setNotes((prev) => (prev.some((n) => n.id === incoming.id) ? prev : [incoming, ...prev]));
+        return;
+      }
+
+      setNotes((prev) =>
+        prev.map((n) => {
+          if (n.id !== incoming.id) return n;
+          // Local unsaved edits (or newer edits) win over a remote echo so we
+          // never overwrite content the user is currently typing.
+          if (!n.synced || n.updatedAt > incoming.updatedAt) return n;
+          return incoming;
+        })
+      );
     },
     []
   );
@@ -170,27 +236,30 @@ export const App: React.FC = () => {
       old?: Record<string, any>;
     }) => {
       const { eventType, new: newData, old: oldData } = payload;
-      if (eventType === 'INSERT' && newData) {
-        const folder: Folder = {
-          id: newData.id,
-          name: newData.name,
-          updatedAt: newData.updated_at,
-          synced: true,
-        };
-        setFolders((prev) =>
-          prev.some((f) => f.id === folder.id) ? prev : [folder, ...prev]
-        );
-      } else if (eventType === 'UPDATE' && newData) {
-        const updated: Folder = {
-          id: newData.id,
-          name: newData.name,
-          updatedAt: newData.updated_at,
-          synced: true,
-        };
-        setFolders((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
-      } else if (eventType === 'DELETE' && oldData) {
+      if (eventType === 'DELETE' && oldData) {
         setFolders((prev) => prev.filter((f) => f.id !== oldData.id));
         setActiveFolder((prev) => (prev === oldData.id ? 'all' : prev));
+        return;
+      }
+      if (!newData) return;
+      const incoming: Folder = {
+        id: newData.id,
+        name: newData.name,
+        updatedAt: newData.updated_at,
+        synced: true,
+      };
+      if (eventType === 'INSERT') {
+        setFolders((prev) =>
+          prev.some((f) => f.id === incoming.id) ? prev : [incoming, ...prev]
+        );
+      } else {
+        setFolders((prev) =>
+          prev.map((f) => {
+            if (f.id !== incoming.id) return f;
+            if (!f.synced || f.updatedAt > incoming.updatedAt) return f;
+            return incoming;
+          })
+        );
       }
     },
     []
@@ -226,10 +295,11 @@ export const App: React.FC = () => {
     [notes, activeFolder, searchQuery]
   );
 
-  const folderNameOf = useCallback(
-    (note: Note) => folders.find((f) => f.id === note.folderId)?.name ?? null,
-    [folders]
-  );
+  const folderNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const f of folders) map[f.id] = f.name;
+    return map;
+  }, [folders]);
 
   useEffect(() => {
     if (!activeNoteId) return;
@@ -239,85 +309,63 @@ export const App: React.FC = () => {
     }
   }, [visibleNotes, activeNoteId, isMobile]);
 
-  const runSync = useCallback(async () => {
-    const result = await syncWithSupabase();
-    setNotes(result.notes);
-    setFolders(result.folders);
-  }, []);
+  const handleSelectNote = useCallback((id: string) => setActiveNoteId(id), []);
 
-  const handleBackToList = () => {
+  const handleBackToList = useCallback(() => {
     setActiveNoteId(null);
     runSync();
-  };
+  }, [runSync]);
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
       showToast('Share link copied');
     } catch {
       showToast('Could not copy link');
     }
-  };
+  }, [showToast]);
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await runSync();
     setRefreshing(false);
     showToast('Synced');
-  };
+  }, [runSync, showToast]);
 
-  const handleSelectFolder = (folder: FolderFilter) => {
+  const handleSelectFolder = useCallback((folder: FolderFilter) => {
     setActiveFolder(folder);
     if (folder !== 'all') setSearchQuery('');
-  };
+  }, []);
 
-  const highlightText = (text: string, query: string) => {
-    if (!query.trim()) return text;
-    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`(${escaped})`, 'gi');
-    return text.replace(
-      regex,
-      '<mark class="bg-amber-200 dark:bg-amber-900/40 text-cream-800 dark:text-amber-200 rounded px-0.5">$1</mark>'
-    );
-  };
+  const handleUpdateNote = useCallback(
+    (field: 'title' | 'content', value: string) => {
+      const id = activeNoteIdRef.current;
+      if (!id) return;
+      setSaveStatus('saving');
 
-  const getPreviewText = (note: Note) => {
-    const text = note.content.replace(/<[^>]*>/g, '').trim();
-    return text || 'No additional text';
-  };
+      setNotes((prev) =>
+        prev.map((note) =>
+          note.id === id ? { ...note, [field]: value, updatedAt: Date.now(), synced: false } : note
+        )
+      );
 
-  const handleUpdateNote = (field: 'title' | 'content', value: string) => {
-    if (!activeNoteId) return;
-    setSaveStatus('saving');
-
-    setNotes((prev) =>
-      prev.map((note) =>
-        note.id === activeNoteId
-          ? { ...note, [field]: value, updatedAt: Date.now(), synced: false }
-          : note
-      )
-    );
-
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(async () => {
-      const currentNotes = await getNotesFromIDBForUI();
-      const updated = currentNotes.find((n) => n.id === activeNoteId);
-      if (updated) {
-        await saveNoteToIDB({
-          ...updated,
-          [field]: value,
-          updatedAt: Date.now(),
-          synced: false,
-        });
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(async () => {
+        // Persist the in-memory note directly instead of re-reading the store.
+        const latest = notesRef.current.find((n) => n.id === id);
+        if (latest) {
+          await saveNoteToIDB(latest);
+        }
         setSaveStatus('saved');
         runSync();
-      }
-    }, 900);
-  };
+      }, 800);
+    },
+    [runSync]
+  );
 
-  const createNewNote = async () => {
-    const folderId =
-      activeFolder !== 'all' && activeFolder !== 'unfiled' ? activeFolder : null;
+  const createNewNote = useCallback(async () => {
+    const folder = activeFolder;
+    const folderId = folder !== 'all' && folder !== 'unfiled' ? folder : null;
     const newNote: Note = {
       id: crypto.randomUUID(),
       title: 'Untitled Note',
@@ -329,92 +377,116 @@ export const App: React.FC = () => {
     await saveNoteToIDB(newNote);
     setNotes((prev) => [newNote, ...prev]);
     setActiveNoteId(newNote.id);
+    if (isMobileViewport()) setActiveFolder('all');
     runSync();
-  };
+  }, [activeFolder, runSync]);
 
-  const handleDeleteNote = async (id: string) => {
-    await deleteNoteFromIDB(id);
-    const remaining = notes.filter((n) => n.id !== id);
-    setNotes(remaining);
-    if (activeNoteId === id) {
-      const visible = filterNotes(remaining, activeFolder, searchQuery);
-      setActiveNoteId(visible.length > 0 ? visible[0].id : null);
-    }
-    runSync();
-  };
+  const handleDeleteNote = useCallback(
+    async (id: string) => {
+      const note = notesRef.current.find((n) => n.id === id);
+      if (!note) return;
+      await deleteNoteFromIDB(id);
+      setNotes((prev) => prev.filter((n) => n.id !== id));
+      setActiveNoteId((prev) => (prev === id ? null : prev));
+      runSync();
+      showToast('Note deleted', {
+        actionLabel: 'Undo',
+        duration: 6000,
+        onAction: async () => {
+          const restored: Note = { ...note, deleted: false, synced: false, updatedAt: Date.now() };
+          await saveNoteToIDB(restored);
+          setNotes((prev) => [restored, ...prev.filter((n) => n.id !== restored.id)]);
+          runSync();
+          showToast('Note restored');
+        },
+      });
+    },
+    [runSync, showToast]
+  );
 
-  const handleMoveNote = async (folderId: string | null) => {
-    if (!activeNoteId) return;
-    const now = Date.now();
-    setSaveStatus('saving');
-    setNotes((prev) =>
-      prev.map((n) =>
-        n.id === activeNoteId ? { ...n, folderId, updatedAt: now, synced: false } : n
-      )
-    );
-    const currentNotes = await getNotesFromIDBForUI();
-    const note = currentNotes.find((n) => n.id === activeNoteId);
-    if (note) {
-      await saveNoteToIDB({ ...note, folderId, updatedAt: now, synced: false });
-    }
-    setSaveStatus('saved');
-    showToast(folderId ? 'Note moved' : 'Note moved to Unfiled');
-    runSync();
-  };
+  const handleMoveNote = useCallback(
+    async (folderId: string | null) => {
+      const id = activeNoteIdRef.current;
+      if (!id) return;
+      const now = Date.now();
+      setSaveStatus('saving');
+      setNotes((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, folderId, updatedAt: now, synced: false } : n))
+      );
+      const note = notesRef.current.find((n) => n.id === id);
+      if (note) {
+        await saveNoteToIDB({ ...note, folderId, updatedAt: now, synced: false });
+      }
+      setSaveStatus('saved');
+      showToast(folderId ? 'Note moved' : 'Note moved to Unfiled');
+      runSync();
+    },
+    [runSync, showToast]
+  );
 
-  const handleCreateFolder = async (name: string) => {
-    const folder: Folder = {
-      id: crypto.randomUUID(),
-      name,
-      updatedAt: Date.now(),
-      synced: false,
-    };
-    await saveFolderToIDB(folder);
-    setFolders((prev) => [folder, ...prev]);
-    setActiveFolder(folder.id);
-    setSearchQuery('');
-    showToast(`Folder "${name}" created`);
-    runSync();
-  };
+  const handleCreateFolder = useCallback(
+    async (name: string) => {
+      const folder: Folder = {
+        id: crypto.randomUUID(),
+        name,
+        updatedAt: Date.now(),
+        synced: false,
+      };
+      await saveFolderToIDB(folder);
+      setFolders((prev) => [folder, ...prev]);
+      setActiveFolder(folder.id);
+      setSearchQuery('');
+      showToast(`Folder "${name}" created`);
+      runSync();
+    },
+    [runSync, showToast]
+  );
 
-  const handleRenameFolder = async (id: string, name: string) => {
-    const folder = folders.find((f) => f.id === id);
-    if (!folder) return;
-    const updated = { ...folder, name, updatedAt: Date.now(), synced: false };
-    setFolders((prev) => prev.map((f) => (f.id === id ? updated : f)));
-    await saveFolderToIDB(updated);
-    showToast('Folder renamed');
-    runSync();
-  };
+  const handleRenameFolder = useCallback(
+    async (id: string, name: string) => {
+      const folder = folders.find((f) => f.id === id);
+      if (!folder) return;
+      const updated = { ...folder, name, updatedAt: Date.now(), synced: false };
+      setFolders((prev) => prev.map((f) => (f.id === id ? updated : f)));
+      await saveFolderToIDB(updated);
+      showToast('Folder renamed');
+      runSync();
+    },
+    [folders, runSync, showToast]
+  );
 
-  const handleDeleteFolder = async (id: string) => {
-    const name = folders.find((f) => f.id === id)?.name ?? 'Folder';
-    await deleteFolderFromIDB(id);
-    setFolders((prev) => prev.filter((f) => f.id !== id));
-    setNotes((prev) =>
-      prev.map((n) => (n.folderId === id ? { ...n, folderId: null } : n))
-    );
-    setActiveFolder('all');
-    showToast(`Folder "${name}" deleted`);
-    runSync();
-  };
+  const handleDeleteFolder = useCallback(
+    async (id: string) => {
+      const name = folders.find((f) => f.id === id)?.name ?? 'Folder';
+      await deleteFolderFromIDB(id);
+      setFolders((prev) => prev.filter((f) => f.id !== id));
+      setNotes((prev) => prev.map((n) => (n.folderId === id ? { ...n, folderId: null } : n)));
+      setActiveFolder('all');
+      showToast(`Folder "${name}" deleted`);
+      runSync();
+    },
+    [folders, runSync, showToast]
+  );
 
-  const handleCopyNote = async () => {
-    if (!activeNote) return;
-    const text = activeNote.content.replace(/<[^>]*>/g, '');
+  const handleCopyNote = useCallback(async () => {
+    const note = notesRef.current.find((n) => n.id === activeNoteIdRef.current);
+    if (!note) return;
     try {
-      await navigator.clipboard.writeText(text);
-      showToast('Note copied');
+      await navigator.clipboard.writeText(htmlToMarkdown(note.content));
+      showToast('Note copied as Markdown');
     } catch {
       showToast('Could not copy note');
     }
-  };
+  }, [showToast]);
 
-  const handleExportMarkdown = () => {
-    if (!activeNote) return;
-    const title = activeNote.title || 'Untitled Note';
-    const text = activeNote.content.replace(/<[^>]*>/g, '');
-    const blob = new Blob([text], { type: 'text/markdown' });
+  const handleExportMarkdown = useCallback(() => {
+    const note = notesRef.current.find((n) => n.id === activeNoteIdRef.current);
+    if (!note) return;
+    const title = (note.title || 'Untitled Note').replace(/[\\/:*?"<>|]/g, '-');
+    const markdown = htmlToMarkdown(note.content);
+    const blob = new Blob([`# ${note.title}\n\n${markdown}\n`], {
+      type: 'text/markdown;charset=utf-8',
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -424,7 +496,7 @@ export const App: React.FC = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     showToast('Exported as Markdown');
-  };
+  }, [showToast]);
 
   const totalCount = notes.length;
   const unfiledCount = countsByFolder['unfiled'] || 0;
@@ -438,8 +510,17 @@ export const App: React.FC = () => {
   const iconBtn =
     'p-2 rounded-lg text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-cream-200 dark:hover:bg-navy-800 transition-colors';
 
+  const showFolderBadge = activeFolder === 'all';
+
   return (
     <div className="h-screen overflow-hidden bg-cream-50 dark:bg-navy-950 text-cream-800 dark:text-white flex flex-col md:flex-row">
+      {!online && (
+        <div className="fixed top-0 inset-x-0 z-[70] flex items-center justify-center gap-2 py-1.5 text-xs font-medium bg-amber-600 text-white">
+          <WifiOff size={12} aria-hidden="true" />
+          Offline — changes are saved locally and will sync when you reconnect
+        </div>
+      )}
+
       <aside
         className={`w-full md:w-80 shrink-0 min-h-0 border-r border-cream-300 dark:border-navy-600 flex flex-col h-screen ${
           activeNoteId ? 'hidden md:flex' : ''
@@ -454,11 +535,12 @@ export const App: React.FC = () => {
               onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
               className={iconBtn}
               title="Toggle theme"
+              aria-label="Toggle theme"
             >
               {theme === 'light' ? (
-                <Moon size={18} className="text-amber-600 dark:text-amber-400" />
+                <Moon size={18} className="text-amber-600 dark:text-amber-400" aria-hidden="true" />
               ) : (
-                <Sun size={18} className="text-amber-600 dark:text-amber-400" />
+                <Sun size={18} className="text-amber-600 dark:text-amber-400" aria-hidden="true" />
               )}
             </button>
             <button
@@ -466,9 +548,11 @@ export const App: React.FC = () => {
               disabled={refreshing}
               className={`${iconBtn} disabled:opacity-50`}
               title="Refresh / sync"
+              aria-label="Refresh and sync"
             >
               <RefreshCw
                 size={18}
+                aria-hidden="true"
                 className={`text-amber-600 dark:text-amber-400 ${refreshing ? 'animate-spin' : ''}`}
               />
             </button>
@@ -476,8 +560,9 @@ export const App: React.FC = () => {
               onClick={createNewNote}
               className="p-2 rounded-lg bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-500 dark:text-amber-950 dark:hover:bg-amber-600 transition-colors"
               title="New note"
+              aria-label="New note"
             >
-              <Plus size={18} />
+              <Plus size={18} aria-hidden="true" />
             </button>
           </div>
         </header>
@@ -487,10 +572,12 @@ export const App: React.FC = () => {
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-cream-400 dark:text-gray-500"
               size={15}
+              aria-hidden="true"
             />
             <input
               type="text"
               placeholder="Search notes..."
+              aria-label="Search notes"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-8 py-2 text-sm bg-cream-100 dark:bg-navy-900 rounded-lg border border-transparent focus:border-amber-400 focus:bg-cream-50 dark:focus:bg-navy-950 focus:outline-none text-cream-800 dark:text-white placeholder-cream-500 dark:placeholder-gray-500 transition-colors"
@@ -500,8 +587,9 @@ export const App: React.FC = () => {
                 onClick={() => setSearchQuery('')}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-cream-400 dark:text-gray-500 hover:text-cream-700 dark:hover:text-gray-200"
                 title="Clear search"
+                aria-label="Clear search"
               >
-                <X size={13} />
+                <X size={13} aria-hidden="true" />
               </button>
             )}
           </div>
@@ -522,7 +610,7 @@ export const App: React.FC = () => {
         <div className="flex-1 min-h-0 overflow-y-auto py-1">
           {visibleNotes.length === 0 ? (
             <div className="px-6 py-12 text-center">
-              <Inbox size={26} className="mx-auto mb-3 text-cream-300 dark:text-navy-600" />
+              <Inbox size={26} className="mx-auto mb-3 text-cream-300 dark:text-navy-600" aria-hidden="true" />
               <p className="text-sm font-medium text-cream-600 dark:text-gray-300">
                 {searchQuery
                   ? 'No matching notes'
@@ -540,70 +628,24 @@ export const App: React.FC = () => {
                   onClick={createNewNote}
                   className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-500 dark:text-amber-950 dark:hover:bg-amber-600 transition-colors"
                 >
-                  <FilePlus2 size={13} />
+                  <FilePlus2 size={13} aria-hidden="true" />
                   New note
                 </button>
               )}
             </div>
           ) : (
-            visibleNotes.map((note) => {
-              const folderName = folderNameOf(note);
-              const active = activeNoteId === note.id;
-              return (
-                <div
-                  key={note.id}
-                  onTouchStart={(e) => (touchStartX.current = e.touches[0].clientX)}
-                  onTouchEnd={(e) => {
-                    const diffX = touchStartX.current - e.changedTouches[0].clientX;
-                    if (diffX > 80) handleDeleteNote(note.id);
-                  }}
-                  onClick={() => setActiveNoteId(note.id)}
-                  className={`mx-2 my-1 px-3 py-2.5 rounded-xl cursor-pointer group relative transition-colors ${
-                    active
-                      ? 'bg-cream-200 dark:bg-navy-800 ring-1 ring-amber-500/40'
-                      : 'hover:bg-cream-100 dark:hover:bg-navy-800/60'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <h3
-                        className="font-semibold text-sm truncate text-cream-800 dark:text-white"
-                        dangerouslySetInnerHTML={{
-                          __html: highlightText(note.title || 'Untitled Note', searchQuery),
-                        }}
-                      />
-                      <p
-                        className="text-xs text-cream-500 dark:text-gray-400 truncate mt-0.5"
-                        dangerouslySetInnerHTML={{
-                          __html: highlightText(getPreviewText(note), searchQuery),
-                        }}
-                      />
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-[10px] text-cream-400 dark:text-gray-500">
-                          {formatDate(note.updatedAt)}
-                        </span>
-                        {activeFolder === 'all' && folderName && (
-                          <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-cream-200 dark:bg-navy-700 text-cream-600 dark:text-gray-300 max-w-[8rem]">
-                            <FolderIcon size={9} className="shrink-0" />
-                            <span className="truncate">{folderName}</span>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteNote(note.id);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 rounded text-cream-400 dark:text-gray-500 hover:text-red-500 transition-opacity"
-                      title="Delete note"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })
+            visibleNotes.map((note) => (
+              <NoteItem
+                key={note.id}
+                note={note}
+                active={activeNoteId === note.id}
+                searchQuery={searchQuery}
+                showFolderBadge={showFolderBadge}
+                folderName={note.folderId ? folderNames[note.folderId] ?? null : null}
+                onSelect={handleSelectNote}
+                onDelete={handleDeleteNote}
+              />
+            ))
           )}
         </div>
 
@@ -612,7 +654,7 @@ export const App: React.FC = () => {
             onClick={handleShare}
             className="w-full flex items-center justify-center gap-1.5 text-xs font-medium bg-cream-100 dark:bg-navy-900 border border-cream-300 dark:border-navy-700 text-cream-600 dark:text-gray-300 px-2 py-2 rounded-lg hover:bg-cream-200 dark:hover:bg-navy-800 transition-colors"
           >
-            <Share2 size={13} />
+            <Share2 size={13} aria-hidden="true" />
             Copy share link
           </button>
         </div>
@@ -635,116 +677,124 @@ export const App: React.FC = () => {
             }}
           >
             <div className="px-4 md:px-12 pt-4 md:pt-8 shrink-0">
-            <div
-              className={`flex flex-wrap items-center gap-2 justify-between pb-3 mb-4 border-b border-cream-300 dark:border-navy-600 ${
-                isFullscreen ? 'hidden' : ''
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleBackToList}
-                  className="md:hidden text-sm text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
-                >
-                  ← Back
-                </button>
-                {!isMobile && (
+              <div
+                className={`flex flex-wrap items-center gap-2 justify-between pb-3 mb-4 border-b border-cream-300 dark:border-navy-600 ${
+                  isFullscreen ? 'hidden' : ''
+                }`}
+              >
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setIsFullscreen(true)}
-                    className="text-sm text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
-                    title="Enter fullscreen reading"
+                    onClick={handleBackToList}
+                    className="md:hidden text-sm text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
                   >
-                    📖 Reading Mode
+                    ← Back
                   </button>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                {folders.length > 0 && (
-                  <div className="relative">
-                    <FolderIcon
-                      size={13}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 text-cream-400 dark:text-gray-500 pointer-events-none"
-                    />
-                    <select
-                      value={activeNote.folderId || ''}
-                      onChange={(e) => handleMoveNote(e.target.value || null)}
-                      className="appearance-none pl-7 pr-6 py-1 text-xs rounded-md bg-cream-200 dark:bg-navy-800 text-cream-700 dark:text-gray-200 border border-cream-300 dark:border-navy-600 focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer"
-                      title="Move note to folder"
+                  {!isMobile && (
+                    <button
+                      onClick={() => setIsFullscreen(true)}
+                      className="text-sm text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                      title="Enter fullscreen reading"
                     >
-                      <option value="">Unfiled</option>
-                      {folders.map((f) => (
-                        <option key={f.id} value={f.id}>
-                          {f.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <button
-                  onClick={handleShare}
-                  className="hidden md:flex items-center gap-1 text-xs text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 bg-cream-200 dark:bg-navy-800 px-2 py-1 rounded-md transition-colors"
-                  title="Copy share link"
-                >
-                  <Share2 size={14} />
-                  Share
-                </button>
-                <button
-                  onClick={handleCopyNote}
-                  className="hidden md:flex items-center gap-1 text-xs text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 bg-cream-200 dark:bg-navy-800 px-2 py-1 rounded-md transition-colors"
-                  title="Copy note text"
-                >
-                  <Copy size={14} />
-                  Copy
-                </button>
-                <button
-                  onClick={handleExportMarkdown}
-                  className="hidden md:flex items-center gap-1 text-xs text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 bg-cream-200 dark:bg-navy-800 px-2 py-1 rounded-md transition-colors"
-                  title="Export as Markdown"
-                >
-                  <Download size={14} />
-                  Export
-                </button>
-                <button
-                  onClick={handleRefresh}
-                  disabled={refreshing}
-                  className="p-1 rounded-md text-cream-500 dark:text-gray-400 hover:bg-cream-200 dark:hover:bg-navy-800 disabled:opacity-50 transition-colors"
-                  title="Refresh / sync"
-                >
-                  <RefreshCw
-                    size={14}
-                    className={`text-cream-500 dark:text-gray-400 ${refreshing ? 'animate-spin' : ''}`}
-                  />
-                </button>
-                <div className="flex items-center gap-1 text-xs text-cream-400 dark:text-gray-500">
-                  {saveStatus === 'saving' ? (
-                    <>
-                      <RefreshCw className="animate-spin" size={12} />
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check className="text-green-500" size={12} />
-                      <span>Saved</span>
-                    </>
+                      📖 Reading Mode
+                    </button>
                   )}
                 </div>
+
+                <div className="flex items-center gap-2">
+                  {folders.length > 0 && (
+                    <div className="relative">
+                      <FolderIcon
+                        size={13}
+                        aria-hidden="true"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 text-cream-400 dark:text-gray-500 pointer-events-none"
+                      />
+                      <select
+                        value={activeNote.folderId || ''}
+                        onChange={(e) => handleMoveNote(e.target.value || null)}
+                        className="appearance-none pl-7 pr-6 py-1 text-xs rounded-md bg-cream-200 dark:bg-navy-800 text-cream-700 dark:text-gray-200 border border-cream-300 dark:border-navy-600 focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer"
+                        title="Move note to folder"
+                        aria-label="Move note to folder"
+                      >
+                        <option value="">Unfiled</option>
+                        {folders.map((f) => (
+                          <option key={f.id} value={f.id}>
+                            {f.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleShare}
+                    className="hidden md:flex items-center gap-1 text-xs text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 bg-cream-200 dark:bg-navy-800 px-2 py-1 rounded-md transition-colors"
+                    title="Copy share link"
+                  >
+                    <Share2 size={14} aria-hidden="true" />
+                    Share
+                  </button>
+                  <button
+                    onClick={handleCopyNote}
+                    className="hidden md:flex items-center gap-1 text-xs text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 bg-cream-200 dark:bg-navy-800 px-2 py-1 rounded-md transition-colors"
+                    title="Copy note as Markdown"
+                  >
+                    <Copy size={14} aria-hidden="true" />
+                    Copy
+                  </button>
+                  <button
+                    onClick={handleExportMarkdown}
+                    className="hidden md:flex items-center gap-1 text-xs text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 bg-cream-200 dark:bg-navy-800 px-2 py-1 rounded-md transition-colors"
+                    title="Export as Markdown"
+                  >
+                    <Download size={14} aria-hidden="true" />
+                    Export
+                  </button>
+                  <button
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                    className="p-1 rounded-md text-cream-500 dark:text-gray-400 hover:bg-cream-200 dark:hover:bg-navy-800 disabled:opacity-50 transition-colors"
+                    title="Refresh / sync"
+                    aria-label="Refresh and sync"
+                  >
+                    <RefreshCw
+                      size={14}
+                      aria-hidden="true"
+                      className={`text-cream-500 dark:text-gray-400 ${refreshing ? 'animate-spin' : ''}`}
+                    />
+                  </button>
+                  <div
+                    className="flex items-center gap-1 text-xs text-cream-400 dark:text-gray-500"
+                    aria-live="polite"
+                  >
+                    {saveStatus === 'saving' ? (
+                      <>
+                        <RefreshCw className="animate-spin" size={12} aria-hidden="true" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="text-green-500" size={12} aria-hidden="true" />
+                        <span>Saved</span>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {!isFullscreen && (
-              <input
-                type="text"
-                value={activeNote.title}
-                onChange={(e) => handleUpdateNote('title', e.target.value)}
-                placeholder="Note Title"
-                className="text-2xl md:text-3xl font-bold bg-transparent border-none outline-none mb-3 w-full text-cream-800 dark:text-white placeholder-cream-400 dark:placeholder-gray-600"
-              />
-            )}
-
+              {!isFullscreen && (
+                <input
+                  type="text"
+                  value={activeNote.title}
+                  onChange={(e) => handleUpdateNote('title', e.target.value)}
+                  placeholder="Note Title"
+                  aria-label="Note title"
+                  className="text-2xl md:text-3xl font-bold bg-transparent border-none outline-none mb-3 w-full text-cream-800 dark:text-white placeholder-cream-400 dark:placeholder-gray-600"
+                />
+              )}
             </div>
 
             <RichEditor
+              noteId={activeNote.id}
               content={activeNote.content}
               onChange={(val) => handleUpdateNote('content', val)}
               isFullscreen={isFullscreen}
@@ -769,7 +819,7 @@ export const App: React.FC = () => {
                 onClick={createNewNote}
                 className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-500 dark:text-amber-950 dark:hover:bg-amber-600 transition-colors"
               >
-                <FilePlus2 size={16} />
+                <FilePlus2 size={16} aria-hidden="true" />
                 New note
               </button>
               <div className="flex flex-col gap-2 text-xs text-cream-400 dark:text-gray-500 mt-8">
@@ -806,8 +856,23 @@ export const App: React.FC = () => {
       </main>
 
       {toast && (
-        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-full text-sm font-medium bg-cream-800 text-cream-50 dark:bg-cream-100 dark:text-cream-900 shadow-lg">
-          {toast}
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 px-4 py-2 rounded-full text-sm font-medium bg-cream-800 text-cream-50 dark:bg-cream-100 dark:text-cream-900 shadow-lg"
+        >
+          <span>{toast.message}</span>
+          {toast.actionLabel && (
+            <button
+              onClick={() => {
+                toast.onAction?.();
+                setToast(null);
+              }}
+              className="font-semibold underline underline-offset-2 hover:opacity-80"
+            >
+              {toast.actionLabel}
+            </button>
+          )}
         </div>
       )}
     </div>
