@@ -196,6 +196,25 @@ export const App: React.FC = () => {
     }
   }, []);
 
+  // Sync when the tab regains focus or becomes visible again, and every 30 s.
+  // This is the primary mechanism that keeps the app in sync across devices —
+  // the realtime channel is best-effort, but a fresh pull on focus guarantees
+  // we pick up anything we missed (closed tab, flaky network, etc.).
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') runSync();
+    };
+    const onFocus = () => runSync();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    const interval = window.setInterval(() => runSync(), 30_000);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+      window.clearInterval(interval);
+    };
+  }, [runSync]);
+
   useEffect(() => {
     let cancelled = false;
     const init = async () => {
