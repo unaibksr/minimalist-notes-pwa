@@ -11,6 +11,7 @@ export interface Note {
 export interface Folder {
   id: string;
   name: string;
+  color?: string;
   updatedAt: number;
   synced: boolean;
   deleted?: boolean;

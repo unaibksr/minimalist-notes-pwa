@@ -1,8 +1,9 @@
 import React, { useMemo, useRef } from 'react';
-import { Trash2, Folder as FolderIcon } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import type { Note } from '../types';
 import { highlightText } from '../lib/highlight';
 import { htmlToPlainText } from '../lib/markdown';
+import { folderColorClasses } from '../lib/folderColors';
 
 const formatDate = (ts: number) => {
   const d = new Date(ts);
@@ -19,6 +20,7 @@ interface NoteItemProps {
   searchQuery: string;
   showFolderBadge: boolean;
   folderName: string | null;
+  folderColor?: string | null;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
 }
@@ -29,6 +31,7 @@ export const NoteItem = React.memo(function NoteItem({
   searchQuery,
   showFolderBadge,
   folderName,
+  folderColor,
   onSelect,
   onDelete,
 }: NoteItemProps) {
@@ -77,7 +80,10 @@ export const NoteItem = React.memo(function NoteItem({
             </span>
             {showFolderBadge && folderName && (
               <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-cream-200 dark:bg-navy-700 text-cream-600 dark:text-gray-300 max-w-[8rem]">
-                <FolderIcon size={9} className="shrink-0" aria-hidden="true" />
+                <span
+                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${folderColorClasses(folderColor).dot}`}
+                  aria-hidden="true"
+                />
                 <span className="truncate">{folderName}</span>
               </span>
             )}

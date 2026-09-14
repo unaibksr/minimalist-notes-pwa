@@ -5,6 +5,7 @@ import {
   saveNoteToIDB,
   deleteNoteFromIDB,
   saveFolderToIDB,
+  saveFoldersToIDB,
   deleteFolderFromIDB,
   getFoldersFromIDBForUI,
 } from './lib/db';
@@ -15,6 +16,7 @@ import {
   detectSupabaseCapabilities,
 } from './lib/supabase';
 import { htmlToMarkdown, htmlToPlainText } from './lib/markdown';
+import { pickFolderColor } from './lib/folderColors';
 import { RichEditor } from './components/RichEditor';
 import { FolderBar } from './components/FolderBar';
 import { NoteItem } from './components/NoteItem';
@@ -59,6 +61,21 @@ interface ToastState {
   actionLabel?: string;
   onAction?: () => void;
 }
+
+/** Assigns a distinct palette colour to any folder that does not have one yet. */
+const ensureFolderColors = (list: Folder[]): { next: Folder[]; changed: Folder[] } => {
+  const used: Array<string | undefined> = list.map((f) => f.color);
+  const changed: Folder[] = [];
+  const next = list.map((f) => {
+    if (f.color) return f;
+    const color = pickFolderColor(used);
+    used.push(color);
+    const updated: Folder = { ...f, color, synced: false, updatedAt: Date.now() };
+    changed.push(updated);
+    return updated;
+  });
+  return { next, changed };
+};
 
 export const App: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -141,8 +158,10 @@ export const App: React.FC = () => {
     if (!supabase) {
       const localNotes = await getNotesFromIDBForUI();
       const localFolders = await getFoldersFromIDBForUI();
+      const { next, changed } = ensureFolderColors(localFolders);
+      if (changed.length) await saveFoldersToIDB(changed);
       setNotes(localNotes);
-      setFolders(localFolders);
+      setFolders(next);
       return;
     }
     if (syncRunning.current) {
@@ -154,8 +173,13 @@ export const App: React.FC = () => {
       do {
         syncPending.current = false;
         const result = await syncWithSupabase();
+        const { next, changed } = ensureFolderColors(result.folders);
+        if (changed.length) {
+          saveFoldersToIDB(changed);
+          syncPending.current = true;
+        }
         setNotes(result.notes);
-        setFolders(result.folders);
+        setFolders(next);
       } while (syncPending.current);
     } catch (err) {
       console.warn('Sync failed', err);
@@ -295,9 +319,9 @@ export const App: React.FC = () => {
     [notes, activeFolder, searchQuery]
   );
 
-  const folderNames = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const f of folders) map[f.id] = f.name;
+  const foldersById = useMemo(() => {
+    const map: Record<string, Folder> = {};
+    for (const f of folders) map[f.id] = f;
     return map;
   }, [folders]);
 
@@ -425,10 +449,11 @@ export const App: React.FC = () => {
   );
 
   const handleCreateFolder = useCallback(
-    async (name: string) => {
+    async (name: string, color: string) => {
       const folder: Folder = {
         id: crypto.randomUUID(),
         name,
+        color,
         updatedAt: Date.now(),
         synced: false,
       };
@@ -443,10 +468,10 @@ export const App: React.FC = () => {
   );
 
   const handleRenameFolder = useCallback(
-    async (id: string, name: string) => {
+    async (id: string, name: string, color: string) => {
       const folder = folders.find((f) => f.id === id);
       if (!folder) return;
-      const updated = { ...folder, name, updatedAt: Date.now(), synced: false };
+      const updated = { ...folder, name, color, updatedAt: Date.now(), synced: false };
       setFolders((prev) => prev.map((f) => (f.id === id ? updated : f)));
       await saveFolderToIDB(updated);
       showToast('Folder renamed');
@@ -641,7 +666,8 @@ export const App: React.FC = () => {
                 active={activeNoteId === note.id}
                 searchQuery={searchQuery}
                 showFolderBadge={showFolderBadge}
-                folderName={note.folderId ? folderNames[note.folderId] ?? null : null}
+                folderName={note.folderId ? foldersById[note.folderId]?.name ?? null : null}
+                folderColor={note.folderId ? foldersById[note.folderId]?.color ?? null : null}
                 onSelect={handleSelectNote}
                 onDelete={handleDeleteNote}
               />

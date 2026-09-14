@@ -33,6 +33,7 @@ let lastSyncTimestamp = 0;
 export interface SupabaseCapabilities {
   foldersTable: boolean;
   noteFolderColumn: boolean;
+  folderColorColumn: boolean;
 }
 
 let capabilities: SupabaseCapabilities | null = null;
@@ -41,10 +42,14 @@ export const detectSupabaseCapabilities = async (): Promise<SupabaseCapabilities
   if (capabilities) return capabilities;
   const client = supabase;
   if (!client) {
-    capabilities = { foldersTable: false, noteFolderColumn: false };
+    capabilities = { foldersTable: false, noteFolderColumn: false, folderColorColumn: false };
     return capabilities;
   }
-  const result: SupabaseCapabilities = { foldersTable: false, noteFolderColumn: false };
+  const result: SupabaseCapabilities = {
+    foldersTable: false,
+    noteFolderColumn: false,
+    folderColorColumn: false,
+  };
   try {
     const { error } = await client.from('folders').select('id').limit(1);
     result.foldersTable = !error;
@@ -56,6 +61,14 @@ export const detectSupabaseCapabilities = async (): Promise<SupabaseCapabilities
     result.noteFolderColumn = !error;
   } catch {
     result.noteFolderColumn = false;
+  }
+  if (result.foldersTable) {
+    try {
+      const { error } = await client.from('folders').select('color').limit(1);
+      result.folderColorColumn = !error;
+    } catch {
+      result.folderColorColumn = false;
+    }
   }
   capabilities = result;
   return result;
@@ -112,13 +125,15 @@ export const syncWithSupabase = async (): Promise<SyncResult> => {
     if (unSyncedFolders.length > 0) {
       const upsertPromises = unSyncedFolders
         .filter((f) => !f.deleted)
-        .map((folder) =>
-          client.from('folders').upsert({
+        .map((folder) => {
+          const row: Record<string, any> = {
             id: folder.id,
             name: folder.name,
             updated_at: folder.updatedAt,
-          })
-        );
+          };
+          if (caps.folderColorColumn) row.color = folder.color ?? null;
+          return client.from('folders').upsert(row);
+        });
 
       const deletePromises = unSyncedFolders
         .filter((f) => f.deleted)
@@ -171,9 +186,12 @@ export const syncWithSupabase = async (): Promise<SyncResult> => {
   }
 
   if (caps.foldersTable) {
+    const folderColumns = caps.folderColorColumn
+      ? 'id,name,color,updated_at'
+      : 'id,name,updated_at';
     const { data: remoteFolders } = await client
       .from('folders')
-      .select('id,name,updated_at')
+      .select(folderColumns)
       .gt('updated_at', lastSyncTimestamp);
 
     if (remoteFolders && remoteFolders.length > 0) {
@@ -181,15 +199,20 @@ export const syncWithSupabase = async (): Promise<SyncResult> => {
       const foldersToSave: Folder[] = [];
       for (const rFolder of remoteFolders as any[]) {
         const local = localFolders.find((f) => f.id === rFolder.id);
+        const remoteColor = caps.folderColorColumn ? rFolder.color ?? undefined : undefined;
         if (!local) {
           foldersToSave.push({
             id: rFolder.id,
             name: rFolder.name,
+            color: remoteColor,
             updatedAt: rFolder.updated_at,
             synced: true,
           });
         } else if (!local.deleted && local.updatedAt < rFolder.updated_at) {
           local.name = rFolder.name;
+          // Only adopt a remote colour when it actually exists, so we never
+          // wipe a locally assigned colour.
+          if (caps.folderColorColumn && remoteColor) local.color = remoteColor;
           local.updatedAt = rFolder.updated_at;
           local.synced = true;
           foldersToSave.push(local);

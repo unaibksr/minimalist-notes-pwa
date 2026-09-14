@@ -1,6 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Folder as FolderIcon, FolderPlus, Pencil, Trash2, X, Check } from 'lucide-react';
+import { FolderPlus, Pencil, Trash2, X, Check } from 'lucide-react';
 import type { Folder, FolderFilter } from '../types';
+import {
+  FOLDER_COLOR_KEYS,
+  folderColorClasses,
+  normalizeFolderColor,
+  pickFolderColor,
+} from '../lib/folderColors';
 
 interface FolderBarProps {
   folders: Folder[];
@@ -9,8 +15,8 @@ interface FolderBarProps {
   unfiledCount: number;
   countsByFolder: Record<string, number>;
   onSelect: (folder: FolderFilter) => void;
-  onCreate: (name: string) => void;
-  onRename: (id: string, name: string) => void;
+  onCreate: (name: string, color: string) => void;
+  onRename: (id: string, name: string, color: string) => void;
   onDelete: (id: string) => void;
 }
 
@@ -18,6 +24,10 @@ type Editing = { mode: 'create' } | { mode: 'rename'; id: string } | null;
 
 const chipBase =
   'shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors whitespace-nowrap';
+const neutralChip =
+  'border-cream-300 dark:border-navy-600 text-cream-600 dark:text-gray-300 hover:bg-cream-200 dark:hover:bg-navy-800';
+const neutralActive =
+  'bg-amber-600 border-amber-600 text-white dark:bg-amber-500 dark:border-amber-500 dark:text-amber-950';
 
 export const FolderBar: React.FC<FolderBarProps> = ({
   folders,
@@ -32,6 +42,7 @@ export const FolderBar: React.FC<FolderBarProps> = ({
 }) => {
   const [editing, setEditing] = useState<Editing>(null);
   const [draft, setDraft] = useState('');
+  const [draftColor, setDraftColor] = useState<string>('amber');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -42,12 +53,14 @@ export const FolderBar: React.FC<FolderBarProps> = ({
 
   const startCreate = () => {
     setDraft('');
+    setDraftColor(pickFolderColor(folders.map((f) => f.color)));
     setEditing({ mode: 'create' });
   };
 
   const startRename = () => {
     if (!activeFolderObj) return;
     setDraft(activeFolderObj.name);
+    setDraftColor(normalizeFolderColor(activeFolderObj.color));
     setEditing({ mode: 'rename', id: activeFolderObj.id });
   };
 
@@ -58,9 +71,9 @@ export const FolderBar: React.FC<FolderBarProps> = ({
       return;
     }
     if (editing?.mode === 'create') {
-      onCreate(name);
+      onCreate(name, draftColor);
     } else if (editing?.mode === 'rename') {
-      onRename(editing.id, name);
+      onRename(editing.id, name, draftColor);
     }
     setEditing(null);
   };
@@ -88,15 +101,17 @@ export const FolderBar: React.FC<FolderBarProps> = ({
                 onClick={startRename}
                 className="p-1.5 rounded-md text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-cream-200 dark:hover:bg-navy-800 transition-colors"
                 title="Rename folder"
+                aria-label="Rename folder"
               >
-                <Pencil size={13} />
+                <Pencil size={13} aria-hidden="true" />
               </button>
               <button
                 onClick={handleDelete}
                 className="p-1.5 rounded-md text-cream-500 dark:text-gray-400 hover:text-red-500 hover:bg-cream-200 dark:hover:bg-navy-800 transition-colors"
                 title="Delete folder"
+                aria-label="Delete folder"
               >
-                <Trash2 size={13} />
+                <Trash2 size={13} aria-hidden="true" />
               </button>
             </>
           )}
@@ -104,18 +119,19 @@ export const FolderBar: React.FC<FolderBarProps> = ({
             onClick={startCreate}
             className="p-1.5 rounded-md text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-cream-200 dark:hover:bg-navy-800 transition-colors"
             title="New folder"
+            aria-label="New folder"
           >
-            <FolderPlus size={14} />
+            <FolderPlus size={14} aria-hidden="true" />
           </button>
         </div>
       </div>
 
       {editing ? (
-        <div className="flex items-center gap-1">
-          <div className="relative flex-1">
-            <FolderIcon
-              size={13}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-cream-400 dark:text-gray-500"
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-1">
+            <span
+              className={`w-3 h-3 rounded-full shrink-0 ml-0.5 ${folderColorClasses(draftColor).dot}`}
+              aria-hidden="true"
             />
             <input
               ref={inputRef}
@@ -126,33 +142,48 @@ export const FolderBar: React.FC<FolderBarProps> = ({
                 if (e.key === 'Escape') cancel();
               }}
               placeholder="Folder name"
-              className="w-full pl-7 pr-2 py-1.5 text-xs rounded-md bg-cream-100 dark:bg-navy-900 border border-cream-300 dark:border-navy-600 text-cream-800 dark:text-white placeholder-cream-500 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-amber-400"
+              aria-label="Folder name"
+              className="flex-1 px-2 py-1.5 text-xs rounded-md bg-cream-100 dark:bg-navy-900 border border-cream-300 dark:border-navy-600 text-cream-800 dark:text-white placeholder-cream-500 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-amber-400"
             />
+            <button
+              onClick={commit}
+              className="p-1.5 rounded-md text-green-600 hover:bg-cream-200 dark:hover:bg-navy-800 transition-colors"
+              title="Save"
+              aria-label="Save folder"
+            >
+              <Check size={14} aria-hidden="true" />
+            </button>
+            <button
+              onClick={cancel}
+              className="p-1.5 rounded-md text-cream-500 dark:text-gray-400 hover:bg-cream-200 dark:hover:bg-navy-800 transition-colors"
+              title="Cancel"
+              aria-label="Cancel"
+            >
+              <X size={14} aria-hidden="true" />
+            </button>
           </div>
-          <button
-            onClick={commit}
-            className="p-1.5 rounded-md text-green-600 hover:bg-cream-200 dark:hover:bg-navy-800 transition-colors"
-            title="Save"
-          >
-            <Check size={14} />
-          </button>
-          <button
-            onClick={cancel}
-            className="p-1.5 rounded-md text-cream-500 dark:text-gray-400 hover:bg-cream-200 dark:hover:bg-navy-800 transition-colors"
-            title="Cancel"
-          >
-            <X size={14} />
-          </button>
+          <div className="flex items-center gap-1.5 flex-wrap pl-0.5">
+            {FOLDER_COLOR_KEYS.map((key) => (
+              <button
+                key={key}
+                onClick={() => setDraftColor(key)}
+                className={`w-5 h-5 rounded-full ${folderColorClasses(key).dot} transition-transform ${
+                  draftColor === key
+                    ? 'ring-2 ring-offset-2 ring-offset-cream-50 dark:ring-offset-navy-950 ring-cream-500 dark:ring-gray-300 scale-110'
+                    : 'hover:scale-110'
+                }`}
+                title={key}
+                aria-label={`Colour ${key}`}
+                aria-pressed={draftColor === key}
+              />
+            ))}
+          </div>
         </div>
       ) : (
         <div className="flex gap-1.5 overflow-x-auto pb-1 -mb-1 folder-scroll">
           <button
             onClick={() => onSelect('all')}
-            className={`${chipBase} ${
-              activeFolder === 'all'
-                ? 'bg-amber-600 border-amber-600 text-white dark:bg-amber-500 dark:border-amber-500 dark:text-amber-950'
-                : 'border-cream-300 dark:border-navy-600 text-cream-600 dark:text-gray-300 hover:bg-cream-200 dark:hover:bg-navy-800'
-            }`}
+            className={`${chipBase} ${activeFolder === 'all' ? neutralActive : neutralChip}`}
           >
             All
             <span className="opacity-70">{totalCount}</span>
@@ -160,11 +191,7 @@ export const FolderBar: React.FC<FolderBarProps> = ({
 
           <button
             onClick={() => onSelect('unfiled')}
-            className={`${chipBase} ${
-              activeFolder === 'unfiled'
-                ? 'bg-amber-600 border-amber-600 text-white dark:bg-amber-500 dark:border-amber-500 dark:text-amber-950'
-                : 'border-cream-300 dark:border-navy-600 text-cream-600 dark:text-gray-300 hover:bg-cream-200 dark:hover:bg-navy-800'
-            }`}
+            className={`${chipBase} ${activeFolder === 'unfiled' ? neutralActive : neutralChip}`}
           >
             Unfiled
             <span className="opacity-70">{unfiledCount}</span>
@@ -172,22 +199,25 @@ export const FolderBar: React.FC<FolderBarProps> = ({
 
           {folders.map((folder) => {
             const active = activeFolder === folder.id;
+            const colors = folderColorClasses(folder.color);
             return (
               <button
                 key={folder.id}
                 onClick={() => onSelect(folder.id)}
                 onDoubleClick={() => {
                   setDraft(folder.name);
+                  setDraftColor(folder.color ?? 'amber');
                   setEditing({ mode: 'rename', id: folder.id });
                 }}
-                className={`${chipBase} max-w-[11rem] ${
-                  active
-                    ? 'bg-amber-600 border-amber-600 text-white dark:bg-amber-500 dark:border-amber-500 dark:text-amber-950'
-                    : 'border-cream-300 dark:border-navy-600 text-cream-600 dark:text-gray-300 hover:bg-cream-200 dark:hover:bg-navy-800'
-                }`}
+                className={`${chipBase} max-w-[11rem] ${active ? colors.active : neutralChip}`}
                 title={`${folder.name} — double-click to rename`}
               >
-                <FolderIcon size={12} className="shrink-0" />
+                <span
+                  className={`w-2 h-2 rounded-full shrink-0 ${
+                    active ? 'bg-white/80' : colors.dot
+                  }`}
+                  aria-hidden="true"
+                />
                 <span className="truncate">{folder.name}</span>
                 <span className="opacity-70">{countsByFolder[folder.id] || 0}</span>
               </button>
@@ -199,7 +229,7 @@ export const FolderBar: React.FC<FolderBarProps> = ({
               onClick={startCreate}
               className={`${chipBase} border-dashed border-cream-400 dark:border-navy-600 text-cream-500 dark:text-gray-400 hover:bg-cream-200 dark:hover:bg-navy-800`}
             >
-              <FolderPlus size={12} />
+              <FolderPlus size={12} aria-hidden="true" />
               New folder
             </button>
           )}
