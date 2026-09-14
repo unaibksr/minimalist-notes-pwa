@@ -439,9 +439,9 @@ export const App: React.FC = () => {
     'p-2 rounded-lg text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-cream-200 dark:hover:bg-navy-800 transition-colors';
 
   return (
-    <div className="min-h-screen bg-cream-50 dark:bg-navy-950 text-cream-800 dark:text-white flex flex-col md:flex-row">
+    <div className="h-screen overflow-hidden bg-cream-50 dark:bg-navy-950 text-cream-800 dark:text-white flex flex-col md:flex-row">
       <aside
-        className={`w-full md:w-80 shrink-0 border-r border-cream-300 dark:border-navy-600 flex flex-col h-screen ${
+        className={`w-full md:w-80 shrink-0 min-h-0 border-r border-cream-300 dark:border-navy-600 flex flex-col h-screen ${
           activeNoteId ? 'hidden md:flex' : ''
         }`}
       >
@@ -619,13 +619,13 @@ export const App: React.FC = () => {
       </aside>
 
       <main
-        className={`flex-1 flex flex-col h-screen overflow-hidden ${
+        className={`flex-1 min-h-0 flex flex-col h-screen overflow-hidden ${
           !activeNoteId ? 'hidden md:flex' : ''
         }`}
       >
         {activeNote ? (
           <div
-            className="flex-1 min-h-0 flex flex-col max-w-full overflow-y-auto"
+            className="flex-1 min-h-0 flex flex-col max-w-full"
             onTouchStart={(e) => {
               mainTouchStartX.current = e.touches[0].clientX;
             }}
@@ -634,7 +634,7 @@ export const App: React.FC = () => {
               if (diffX > 80 && isMobile) handleBackToList();
             }}
           >
-            <div className="px-4 md:px-12 pt-4 md:pt-8">
+            <div className="px-4 md:px-12 pt-4 md:pt-8 shrink-0">
             <div
               className={`flex flex-wrap items-center gap-2 justify-between pb-3 mb-4 border-b border-cream-300 dark:border-navy-600 ${
                 isFullscreen ? 'hidden' : ''
