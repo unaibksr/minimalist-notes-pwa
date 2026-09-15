@@ -1,9 +1,10 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Trash2, Pin, PinOff } from 'lucide-react';
 import type { Note } from '../types';
 import { highlightText } from '../lib/highlight';
 import { htmlToPlainText } from '../lib/markdown';
 import { folderColorClasses } from '../lib/folderColors';
+import { useSwipe } from '../lib/useSwipe';
 
 const formatDate = (ts: number) => {
   const d = new Date(ts);
@@ -37,7 +38,16 @@ export const NoteItem = React.memo(function NoteItem({
   onDelete,
   onTogglePin,
 }: NoteItemProps) {
-  const touchStartX = useRef(0);
+  // Mobile gesture: a deliberate swipe left on a note deletes it (undoable).
+  const swipeHandlers = useSwipe({
+    threshold: 80,
+    onSwipe: useCallback(
+      (direction) => {
+        if (direction === 'left') onDelete(note.id);
+      },
+      [onDelete, note.id]
+    ),
+  });
 
   const preview = useMemo(() => {
     const text = htmlToPlainText(note.content).slice(0, 160);
@@ -55,10 +65,7 @@ export const NoteItem = React.memo(function NoteItem({
 
   return (
     <div
-      onTouchStart={(e) => (touchStartX.current = e.touches[0].clientX)}
-      onTouchEnd={(e) => {
-        if (touchStartX.current - e.changedTouches[0].clientX > 80) onDelete(note.id);
-      }}
+      {...swipeHandlers}
       onClick={() => onSelect(note.id)}
       className={`mx-2 my-1.5 px-3 py-2.5 rounded-xl cursor-pointer group relative border transition-all duration-150 ${
         active

@@ -18,6 +18,7 @@ import {
 import { htmlToMarkdown, htmlToPlainText } from './lib/markdown';
 import { folderColorClasses, pickFolderColor } from './lib/folderColors';
 import { useTheme } from './lib/useTheme';
+import { useSwipe } from './lib/useSwipe';
 import { RichEditor } from './components/RichEditor';
 import { FolderGrid } from './components/FolderGrid';
 import { NoteItem } from './components/NoteItem';
@@ -96,7 +97,6 @@ export const App: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMobile, setIsMobile] = useState(isMobileViewport());
 
-  const mainTouchStartX = useRef(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copyMenuRef = useRef<HTMLDivElement>(null);
   const [copyMenuOpen, setCopyMenuOpen] = useState(false);
@@ -379,6 +379,16 @@ export const App: React.FC = () => {
     setActiveNoteId(null);
     runSync();
   }, [runSync]);
+
+  // Mobile gesture: swiping left on the open note returns to the previous
+  // screen (the notes list). Vertical scrolls and text selection are ignored.
+  const editorSwipe = useSwipe({
+    enabled: isMobile,
+    ignoreWhenTextSelected: true,
+    onSwipe: (direction) => {
+      if (direction === 'left') handleBackToList();
+    },
+  });
 
   const handleShare = useCallback(async () => {
     try {
@@ -846,16 +856,7 @@ export const App: React.FC = () => {
         }`}
       >
         {activeNote ? (
-          <div
-            className="flex-1 min-h-0 flex flex-col max-w-full"
-            onTouchStart={(e) => {
-              mainTouchStartX.current = e.touches[0].clientX;
-            }}
-            onTouchEnd={(e) => {
-              const diffX = mainTouchStartX.current - e.changedTouches[0].clientX;
-              if (diffX > 80 && isMobile) handleBackToList();
-            }}
-          >
+          <div className="flex-1 min-h-0 flex flex-col max-w-full" {...editorSwipe}>
             <div className="px-4 md:px-12 pt-4 md:pt-8 shrink-0">
               <div
                 className={`flex flex-wrap items-center gap-2 justify-between pb-3 mb-4 border-b border-cream-300 dark:border-navy-600 ${
