@@ -34,6 +34,7 @@ export interface SupabaseCapabilities {
   foldersTable: boolean;
   noteFolderColumn: boolean;
   folderColorColumn: boolean;
+  notePinnedColumn: boolean;
 }
 
 let capabilities: SupabaseCapabilities | null = null;
@@ -42,13 +43,19 @@ export const detectSupabaseCapabilities = async (): Promise<SupabaseCapabilities
   if (capabilities) return capabilities;
   const client = supabase;
   if (!client) {
-    capabilities = { foldersTable: false, noteFolderColumn: false, folderColorColumn: false };
+    capabilities = {
+      foldersTable: false,
+      noteFolderColumn: false,
+      folderColorColumn: false,
+      notePinnedColumn: false,
+    };
     return capabilities;
   }
   const result: SupabaseCapabilities = {
     foldersTable: false,
     noteFolderColumn: false,
     folderColorColumn: false,
+    notePinnedColumn: false,
   };
   try {
     const { error } = await client.from('folders').select('id').limit(1);
@@ -61,6 +68,12 @@ export const detectSupabaseCapabilities = async (): Promise<SupabaseCapabilities
     result.noteFolderColumn = !error;
   } catch {
     result.noteFolderColumn = false;
+  }
+  try {
+    const { error } = await client.from('notes').select('pinned').limit(1);
+    result.notePinnedColumn = !error;
+  } catch {
+    result.notePinnedColumn = false;
   }
   if (result.foldersTable) {
     try {
@@ -104,6 +117,7 @@ export const syncWithSupabase = async (): Promise<SyncResult> => {
           updated_at: note.updatedAt,
         };
         if (caps.noteFolderColumn) row.folder_id = note.folderId ?? null;
+        if (caps.notePinnedColumn) row.pinned = !!note.pinned;
         return client.from('notes').upsert(row);
       });
 
@@ -148,9 +162,12 @@ export const syncWithSupabase = async (): Promise<SyncResult> => {
     }
   }
 
-  const noteColumns = caps.noteFolderColumn
-    ? 'id,title,content,updated_at,folder_id'
-    : 'id,title,content,updated_at';
+  const noteColumns = (() => {
+    const cols = ['id', 'title', 'content', 'updated_at'];
+    if (caps.noteFolderColumn) cols.push('folder_id');
+    if (caps.notePinnedColumn) cols.push('pinned');
+    return cols.join(',');
+  })();
 
   const { data: remoteNotes } = await client
     .from('notes')
@@ -162,6 +179,7 @@ export const syncWithSupabase = async (): Promise<SyncResult> => {
     for (const rNote of remoteNotes as any[]) {
       const local = localNotes.find((n) => n.id === rNote.id);
       const remoteFolderId = caps.noteFolderColumn ? (rNote.folder_id ?? null) : null;
+      const remotePinned = caps.notePinnedColumn ? !!rNote.pinned : false;
       if (!local) {
         notesToSave.push({
           id: rNote.id,
@@ -170,12 +188,14 @@ export const syncWithSupabase = async (): Promise<SyncResult> => {
           updatedAt: rNote.updated_at,
           synced: true,
           folderId: remoteFolderId,
+          pinned: remotePinned,
         });
       } else if (!local.deleted && local.updatedAt < rNote.updated_at) {
         local.title = rNote.title;
         local.content = rNote.content;
         local.updatedAt = rNote.updated_at;
         local.folderId = remoteFolderId;
+        local.pinned = remotePinned;
         local.synced = true;
         notesToSave.push(local);
       }

@@ -273,6 +273,7 @@ export const App: React.FC = () => {
         updatedAt: newData.updated_at,
         synced: true,
         folderId: newData.folder_id ?? null,
+        pinned: !!newData.pinned,
       };
 
       if (eventType === 'INSERT') {
