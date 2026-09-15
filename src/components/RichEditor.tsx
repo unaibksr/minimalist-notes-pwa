@@ -310,7 +310,7 @@ export const RichEditor: React.FC<RichEditorProps> = ({
       )}
 
       <div className={`flex-1 min-h-0 overflow-y-auto w-full max-w-full ${isFullscreen ? 'p-6' : 'px-4 md:px-12 pt-4 pb-24 md:pb-4'}`}>
-        <div className="max-w-3xl mx-auto w-full">
+        <div className="max-w-[62rem] mx-auto w-full">
           <div style={{ fontSize: `${fontSize}px` }} className="w-full max-w-full">
             <BubbleMenu
               editor={editor}

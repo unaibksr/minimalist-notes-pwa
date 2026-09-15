@@ -1095,7 +1095,7 @@ export const App: React.FC = () => {
               </div>
 
               {!isFullscreen && (
-                <div className="max-w-3xl mx-auto w-full">
+                <div className="max-w-[62rem] mx-auto w-full">
                   <input
                     type="text"
                     value={activeNote.title}
