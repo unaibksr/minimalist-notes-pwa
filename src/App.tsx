@@ -19,7 +19,7 @@ import { htmlToMarkdown, htmlToPlainText } from './lib/markdown';
 import { folderColorClasses, pickFolderColor } from './lib/folderColors';
 import { useTheme } from './lib/useTheme';
 import { RichEditor } from './components/RichEditor';
-import { FolderBar } from './components/FolderBar';
+import { FolderGrid } from './components/FolderGrid';
 import { NoteItem } from './components/NoteItem';
 import { ThemeToggle } from './components/ThemeToggle';
 import { BottomNav } from './components/BottomNav';
@@ -36,6 +36,9 @@ import {
   FilePlus2,
   Inbox,
   WifiOff,
+  NotebookPen,
+  Folders,
+  ChevronRight,
 } from 'lucide-react';
 
 const isMobileViewport = () => window.matchMedia('(max-width: 767px)').matches;
@@ -83,6 +86,7 @@ export const App: React.FC = () => {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [activeFolder, setActiveFolder] = useState<FolderFilter>('all');
+  const [sidebarTab, setSidebarTab] = useState<'notes' | 'folders'>('notes');
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState<ToastState | null>(null);
   const [online, setOnline] = useState(navigator.onLine);
@@ -679,60 +683,129 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        <FolderBar
-          folders={folders}
-          activeFolder={activeFolder}
-          totalCount={totalCount}
-          unfiledCount={unfiledCount}
-          countsByFolder={countsByFolder}
-          onSelect={handleSelectFolder}
-          onCreate={handleCreateFolder}
-          onRename={handleRenameFolder}
-          onDelete={handleDeleteFolder}
-        />
+        <div className="px-3 pt-2 pb-1.5 flex items-center gap-1 border-b border-cream-300 dark:border-navy-600">
+          <button
+            role="tab"
+            aria-selected={sidebarTab === 'notes'}
+            onClick={() => setSidebarTab('notes')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              sidebarTab === 'notes'
+                ? 'bg-primary-600 text-white dark:bg-primary-500 dark:text-primary-950'
+                : 'text-cream-500 dark:text-gray-400 hover:bg-cream-200 dark:hover:bg-navy-800'
+            }`}
+          >
+            <NotebookPen size={13} aria-hidden="true" />
+            Notes
+            <span className={`text-[10px] ${sidebarTab === 'notes' ? 'opacity-80' : 'opacity-60'}`}>
+              {totalCount}
+            </span>
+          </button>
+          <button
+            role="tab"
+            aria-selected={sidebarTab === 'folders'}
+            onClick={() => setSidebarTab('folders')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              sidebarTab === 'folders'
+                ? 'bg-primary-600 text-white dark:bg-primary-500 dark:text-primary-950'
+                : 'text-cream-500 dark:text-gray-400 hover:bg-cream-200 dark:hover:bg-navy-800'
+            }`}
+          >
+            <Folders size={13} aria-hidden="true" />
+            Folders
+            <span className={`text-[10px] ${sidebarTab === 'folders' ? 'opacity-80' : 'opacity-60'}`}>
+              {folders.length}
+            </span>
+          </button>
+          <div className="ml-auto">
+            <button
+              onClick={() => setSidebarTab('folders')}
+              className="text-xs text-cream-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors inline-flex items-center gap-0.5"
+              title="Manage folders"
+            >
+              <span className="hidden md:inline">Manage</span>
+              <ChevronRight size={13} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto pt-1 pb-20 md:pb-1">
-          {visibleNotes.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <Inbox size={26} className="mx-auto mb-3 text-cream-300 dark:text-navy-600" aria-hidden="true" />
-              <p className="text-sm font-medium text-cream-600 dark:text-gray-300">
-                {searchQuery
-                  ? 'No matching notes'
-                  : activeFolder === 'unfiled'
-                  ? 'Nothing unfiled'
-                  : 'No notes here yet'}
-              </p>
-              <p className="text-xs text-cream-400 dark:text-gray-500 mt-1">
-                {searchQuery
-                  ? 'Try a different search term.'
-                  : `Create a note in ${activeFolderLabel}.`}
-              </p>
-              {!searchQuery && (
-                <button
-                  onClick={createNewNote}
-                  className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-500 dark:text-amber-950 dark:hover:bg-amber-600 transition-colors"
-                >
-                  <FilePlus2 size={13} aria-hidden="true" />
-                  New note
-                </button>
+        {sidebarTab === 'folders' ? (
+          <div className="flex-1 min-h-0 overflow-y-auto pt-3 pb-20 md:pb-3 px-3">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-cream-500 dark:text-gray-400">
+                All Folders
+              </span>
+            </div>
+            <FolderGrid
+              folders={folders}
+              activeFolder={activeFolder}
+              totalCount={totalCount}
+              unfiledCount={unfiledCount}
+              countsByFolder={countsByFolder}
+              onSelect={(f) => {
+                handleSelectFolder(f);
+                setSidebarTab('notes');
+              }}
+              onCreate={handleCreateFolder}
+              onRename={handleRenameFolder}
+              onDelete={handleDeleteFolder}
+            />
+          </div>
+        ) : (
+          <>
+            <div className="px-3 py-2 border-b border-cream-300 dark:border-navy-600 flex items-center gap-2">
+              <FolderIcon size={13} aria-hidden="true" className="text-cream-400 dark:text-gray-500" />
+              <span className="text-xs font-medium text-cream-700 dark:text-gray-200 truncate">
+                {activeFolderLabel}
+              </span>
+              <span className="text-[10px] text-cream-400 dark:text-gray-500">
+                {visibleNotes.length}
+              </span>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto pt-1 pb-20 md:pb-1">
+              {visibleNotes.length === 0 ? (
+                <div className="px-6 py-12 text-center">
+                  <Inbox size={26} className="mx-auto mb-3 text-cream-300 dark:text-navy-600" aria-hidden="true" />
+                  <p className="text-sm font-medium text-cream-600 dark:text-gray-300">
+                    {searchQuery
+                      ? 'No matching notes'
+                      : activeFolder === 'unfiled'
+                      ? 'Nothing unfiled'
+                      : 'No notes here yet'}
+                  </p>
+                  <p className="text-xs text-cream-400 dark:text-gray-500 mt-1">
+                    {searchQuery
+                      ? 'Try a different search term.'
+                      : `Create a note in ${activeFolderLabel}.`}
+                  </p>
+                  {!searchQuery && (
+                    <button
+                      onClick={createNewNote}
+                      className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-500 dark:text-amber-950 dark:hover:bg-amber-600 transition-colors"
+                    >
+                      <FilePlus2 size={13} aria-hidden="true" />
+                      New note
+                    </button>
+                  )}
+                </div>
+              ) : (
+                visibleNotes.map((note) => (
+                  <NoteItem
+                    key={note.id}
+                    note={note}
+                    active={activeNoteId === note.id}
+                    searchQuery={searchQuery}
+                    showFolderBadge={showFolderBadge}
+                    folderName={note.folderId ? foldersById[note.folderId]?.name ?? null : null}
+                    folderColor={note.folderId ? foldersById[note.folderId]?.color ?? null : null}
+                    onSelect={handleSelectNote}
+                    onDelete={handleDeleteNote}
+                  />
+                ))
               )}
             </div>
-          ) : (
-            visibleNotes.map((note) => (
-              <NoteItem
-                key={note.id}
-                note={note}
-                active={activeNoteId === note.id}
-                searchQuery={searchQuery}
-                showFolderBadge={showFolderBadge}
-                folderName={note.folderId ? foldersById[note.folderId]?.name ?? null : null}
-                folderColor={note.folderId ? foldersById[note.folderId]?.color ?? null : null}
-                onSelect={handleSelectNote}
-                onDelete={handleDeleteNote}
-              />
-            ))
-          )}
-        </div>
+          </>
+        )}
 
         <div className="p-3 border-t border-cream-300 dark:border-navy-600">
           <button
