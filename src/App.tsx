@@ -44,6 +44,13 @@ import {
 
 const isMobileViewport = () => window.matchMedia('(max-width: 767px)').matches;
 
+/**
+ * Mobile screens form a simple stack. Each deeper screen is mirrored with a
+ * History API entry so the browser/device back button (and the Android back
+ * gesture) returns to the previous screen instead of leaving the app.
+ */
+const SCREEN_LEVELS: Record<string, number> = { list: 0, editor: 1, fullscreen: 2 };
+
 const filterNotes = (list: Note[], activeFolder: FolderFilter, query: string) => {
   const q = query.trim().toLowerCase();
   return list.filter((n) => {
@@ -105,6 +112,8 @@ export const App: React.FC = () => {
   const syncRunning = useRef(false);
   const syncPending = useRef(false);
   const toastTimer = useRef<number | null>(null);
+  // How many History entries the app has pushed for the mobile screen stack.
+  const navDepthRef = useRef(0);
 
   useEffect(() => {
     notesRef.current = notes;
@@ -373,12 +382,91 @@ export const App: React.FC = () => {
     }
   }, [visibleNotes, activeNoteId, isMobile]);
 
-  const handleSelectNote = useCallback((id: string) => setActiveNoteId(id), []);
+  /**
+   * Mirrors a deeper mobile screen with a History entry so the device back
+   * button/gesture can return to the previous screen. If we are already at (or
+   * deeper than) the target level we replace instead of pushing, so tapping
+   * "New" while a note is open doesn't create a no-op back step.
+   */
+  const pushScreen = useCallback((screen: 'editor' | 'fullscreen') => {
+    if (!isMobileViewport()) return;
+    const level = SCREEN_LEVELS[screen] ?? 0;
+    if (navDepthRef.current >= level) {
+      window.history.replaceState({ notesScreen: screen }, '');
+    } else {
+      window.history.pushState({ notesScreen: screen }, '');
+    }
+    navDepthRef.current = level;
+  }, []);
+
+  /**
+   * Navigates back to a shallower screen level. On mobile this walks the
+   * History stack (keeping the hardware back button in sync) and the actual
+   * React state change is applied by the popstate handler below. On desktop the
+   * state is applied directly since list and editor share one screen.
+   */
+  const goBackToLevel = useCallback((target: number) => {
+    if (isMobileViewport()) {
+      const diff = navDepthRef.current - target;
+      if (diff > 0) {
+        window.history.go(-diff);
+        return;
+      }
+    }
+    if (target < 2) setIsFullscreen(false);
+    if (target < 1) setActiveNoteId(null);
+  }, []);
+
+  // Device back button / back gesture → return to the previous screen.
+  useEffect(() => {
+    const onPopState = (e: PopStateEvent) => {
+      const pushed = !!e.state && typeof e.state.notesScreen === 'string';
+      // Ignore navigations we did not create (e.g. desktop, where the note and
+      // the list are the same screen).
+      if (!pushed && navDepthRef.current === 0) return;
+      const level = pushed ? SCREEN_LEVELS[e.state.notesScreen] ?? 0 : 0;
+      navDepthRef.current = level;
+      setIsFullscreen(level >= 2);
+      if (level < 1) {
+        setActiveNoteId(null);
+        runSync();
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [runSync]);
+
+  // If the editor closes for a non-History reason (note deleted, filter
+  // change), drop any dangling History entries so back doesn't get stuck.
+  useEffect(() => {
+    if (!isMobile || activeNoteId) return;
+    if (navDepthRef.current === 0) return;
+    const diff = navDepthRef.current;
+    navDepthRef.current = 0;
+    window.history.go(-diff);
+  }, [activeNoteId, isMobile]);
+
+  const toggleFullscreen = useCallback(() => {
+    if (isFullscreen) {
+      goBackToLevel(1);
+    } else {
+      pushScreen('fullscreen');
+      setIsFullscreen(true);
+    }
+  }, [isFullscreen, goBackToLevel, pushScreen]);
+
+  const handleSelectNote = useCallback(
+    (id: string) => {
+      setActiveNoteId(id);
+      pushScreen('editor');
+    },
+    [pushScreen]
+  );
 
   const handleBackToList = useCallback(() => {
-    setActiveNoteId(null);
+    goBackToLevel(0);
     runSync();
-  }, [runSync]);
+  }, [goBackToLevel, runSync]);
 
   // Mobile gesture: swiping left on the open note returns to the previous
   // screen (the notes list). Vertical scrolls and text selection are ignored.
@@ -451,9 +539,10 @@ export const App: React.FC = () => {
     await saveNoteToIDB(newNote);
     setNotes((prev) => [newNote, ...prev]);
     setActiveNoteId(newNote.id);
+    pushScreen('editor');
     if (isMobileViewport()) setActiveFolder('all');
     runSync();
-  }, [activeFolder, runSync]);
+  }, [activeFolder, pushScreen, runSync]);
 
   const handleTogglePin = useCallback(
     async (id: string) => {
@@ -872,7 +961,7 @@ export const App: React.FC = () => {
                   </button>
                   {!isMobile && (
                     <button
-                      onClick={() => setIsFullscreen(true)}
+                      onClick={toggleFullscreen}
                       className="text-sm text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
                       title="Enter fullscreen reading"
                     >
@@ -1024,7 +1113,7 @@ export const App: React.FC = () => {
               content={activeNote.content}
               onChange={(val) => handleUpdateNote('content', val)}
               isFullscreen={isFullscreen}
-              onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
+              onToggleFullscreen={toggleFullscreen}
               onExportMarkdown={handleExportMarkdown}
               onCopyNote={handleCopyNote}
             />
