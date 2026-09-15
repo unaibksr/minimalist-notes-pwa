@@ -346,7 +346,16 @@ export const App: React.FC = () => {
   }, [notes]);
 
   const visibleNotes = useMemo(
-    () => filterNotes(notes, activeFolder, searchQuery),
+    () => {
+      const filtered = filterNotes(notes, activeFolder, searchQuery);
+      // Pinned notes float to the top, otherwise keep updatedAt-desc order.
+      return [...filtered].sort((a, b) => {
+        const ap = a.pinned ? 1 : 0;
+        const bp = b.pinned ? 1 : 0;
+        if (ap !== bp) return bp - ap;
+        return b.updatedAt - a.updatedAt;
+      });
+    },
     [notes, activeFolder, searchQuery]
   );
 
@@ -435,6 +444,18 @@ export const App: React.FC = () => {
     if (isMobileViewport()) setActiveFolder('all');
     runSync();
   }, [activeFolder, runSync]);
+
+  const handleTogglePin = useCallback(
+    async (id: string) => {
+      const note = notesRef.current.find((n) => n.id === id);
+      if (!note) return;
+      const updated = { ...note, pinned: !note.pinned, updatedAt: Date.now(), synced: false };
+      setNotes((prev) => prev.map((n) => (n.id === id ? updated : n)));
+      await saveNoteToIDB(updated);
+      runSync();
+    },
+    [runSync]
+  );
 
   const handleDeleteNote = useCallback(
     async (id: string) => {
@@ -800,6 +821,7 @@ export const App: React.FC = () => {
                     folderColor={note.folderId ? foldersById[note.folderId]?.color ?? null : null}
                     onSelect={handleSelectNote}
                     onDelete={handleDeleteNote}
+                    onTogglePin={handleTogglePin}
                   />
                 ))
               )}

@@ -6,6 +6,8 @@ export interface Note {
   synced: boolean;
   deleted?: boolean;
   folderId?: string | null;
+  pinned?: boolean;
+  tags?: string[];
 }
 
 export interface Folder {
@@ -17,6 +19,6 @@ export interface Folder {
   deleted?: boolean;
 }
 
-export type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark' | 'system';
 
 export type FolderFilter = 'all' | 'unfiled' | string;

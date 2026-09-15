@@ -1,5 +1,5 @@
 import React, { useMemo, useRef } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Pin, PinOff } from 'lucide-react';
 import type { Note } from '../types';
 import { highlightText } from '../lib/highlight';
 import { htmlToPlainText } from '../lib/markdown';
@@ -23,6 +23,7 @@ interface NoteItemProps {
   folderColor?: string | null;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  onTogglePin?: (id: string) => void;
 }
 
 export const NoteItem = React.memo(function NoteItem({
@@ -34,6 +35,7 @@ export const NoteItem = React.memo(function NoteItem({
   folderColor,
   onSelect,
   onDelete,
+  onTogglePin,
 }: NoteItemProps) {
   const touchStartX = useRef(0);
 
@@ -66,10 +68,19 @@ export const NoteItem = React.memo(function NoteItem({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <h3
-            className="font-semibold text-sm truncate text-cream-800 dark:text-white"
-            dangerouslySetInnerHTML={{ __html: titleHtml }}
-          />
+          <div className="flex items-center gap-1.5">
+            {note.pinned && (
+              <Pin
+                size={11}
+                aria-label="Pinned"
+                className="text-primary-600 dark:text-primary-400 fill-primary-600 dark:fill-primary-400 shrink-0"
+              />
+            )}
+            <h3
+              className="font-semibold text-sm truncate text-cream-800 dark:text-white"
+              dangerouslySetInnerHTML={{ __html: titleHtml }}
+            />
+          </div>
           <p
             className="text-xs text-cream-500 dark:text-gray-400 truncate mt-0.5"
             dangerouslySetInnerHTML={{ __html: previewHtml }}
@@ -89,17 +100,33 @@ export const NoteItem = React.memo(function NoteItem({
             )}
           </div>
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(note.id);
-          }}
-          className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 p-1 rounded text-cream-400 dark:text-gray-500 hover:text-red-500 transition-opacity"
-          title="Delete note"
-          aria-label={`Delete note ${note.title || 'Untitled Note'}`}
-        >
-          <Trash2 size={15} aria-hidden="true" />
-        </button>
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          {onTogglePin && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onTogglePin(note.id);
+              }}
+              className="p-1 rounded text-cream-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+              title={note.pinned ? 'Unpin' : 'Pin'}
+              aria-label={note.pinned ? `Unpin ${note.title || 'Untitled Note'}` : `Pin ${note.title || 'Untitled Note'}`}
+              aria-pressed={!!note.pinned}
+            >
+              {note.pinned ? <PinOff size={15} aria-hidden="true" /> : <Pin size={15} aria-hidden="true" />}
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(note.id);
+            }}
+            className="p-1 rounded text-cream-400 dark:text-gray-500 hover:text-red-500 transition-colors"
+            title="Delete note"
+            aria-label={`Delete note ${note.title || 'Untitled Note'}`}
+          >
+            <Trash2 size={15} aria-hidden="true" />
+          </button>
+        </div>
       </div>
     </div>
   );
