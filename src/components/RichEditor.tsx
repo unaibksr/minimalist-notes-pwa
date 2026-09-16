@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { MarkdownPasteHandler } from '../lib/pasteHandler';
 import { markdownToHtml, hasMarkdown } from '../lib/markdownToHtml';
+import { htmlToPlainText } from '../lib/markdown';
 
 interface RichEditorProps {
   noteId: string;
@@ -142,11 +143,12 @@ export const RichEditor: React.FC<RichEditorProps> = ({
 
   const handleRenderMarkdown = () => {
     if (!editor) return;
-    const html = editor.getHTML();
-    const plainText = html.replace(/<[^>]*>/g, '');
+    // Paragraph, heading and list breaks have to survive as newlines, otherwise
+    // block patterns such as "# Heading" or "- item" can never match (and
+    // entities like &amp; would be parsed as literal "&amp;" text).
+    const plainText = htmlToPlainText(editor.getHTML());
     if (!hasMarkdown(plainText)) return;
-    const rendered = markdownToHtml(plainText);
-    editor.commands.setContent(rendered);
+    editor.commands.setContent(markdownToHtml(plainText));
   };
 
   return (

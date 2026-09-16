@@ -124,4 +124,70 @@
   .accent-color {
     @apply text-amber-600 dark:text-amber-400;
   }
+
+  /* Headings below h3 — the toolbar stops at h3, but pasted Markdown can
+     contain h4–h6. */
+  .tiptap h4,
+  .tiptap h5,
+  .tiptap h6 {
+    @apply text-cream-700 dark:text-cream-200;
+    font-weight: 600;
+  }
+
+  .tiptap h4 {
+    font-size: 1.125rem;
+  }
+
+  .tiptap h5 {
+    font-size: 1rem;
+  }
+
+  .tiptap h6 {
+    font-size: 0.875rem;
+  }
+
+  /* Block content produced by Markdown conversion. Tailwind's preflight strips
+     list markers and the spacing/margins of these elements, so restore what a
+     bulleted list, quote, code block or rule needs in order to look right. */
+  .tiptap ul,
+  .tiptap ol {
+    @apply my-2 pl-6;
+  }
+
+  .tiptap ul {
+    list-style: disc;
+  }
+
+  .tiptap ul ul {
+    list-style: circle;
+  }
+
+  .tiptap ol {
+    list-style: decimal;
+  }
+
+  .tiptap li {
+    @apply my-1;
+  }
+
+  .tiptap blockquote {
+    @apply my-2 pl-3 italic text-cream-600 dark:text-gray-300;
+    border-left: 3px solid theme('colors.amber.500');
+  }
+
+  .tiptap hr {
+    @apply my-3 border-cream-300 dark:border-navy-600;
+  }
+
+  .tiptap pre {
+    @apply my-2 p-3 rounded-lg overflow-x-auto text-sm bg-cream-200 dark:bg-navy-900 border border-cream-300 dark:border-navy-700 text-cream-800 dark:text-gray-200;
+  }
+
+  .tiptap code {
+    @apply px-1 py-0.5 rounded text-[0.9em] bg-cream-200 dark:bg-navy-800 text-cream-800 dark:text-gray-200;
+  }
+
+  .tiptap pre code {
+    @apply p-0 bg-transparent text-inherit;
+  }
 }
