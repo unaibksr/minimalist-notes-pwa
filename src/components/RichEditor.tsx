@@ -22,12 +22,9 @@ import {
   Copy,
   Type,
   ArrowLeft,
-  FileText,
   List,
 } from 'lucide-react';
 import { MarkdownPasteHandler } from '../lib/pasteHandler';
-import { markdownToHtml, hasMarkdown } from '../lib/markdownToHtml';
-import { htmlToPlainText } from '../lib/markdown';
 
 interface RichEditorProps {
   noteId: string;
@@ -73,7 +70,7 @@ export const RichEditor: React.FC<RichEditorProps> = ({
     editorProps: {
       attributes: {
         class:
-          'tiptap max-w-none focus:outline-none min-h-[calc(100vh-260px)] text-justify leading-relaxed text-base text-cream-800 dark:text-white',
+          'tiptap max-w-none focus:outline-none min-h-[calc(100vh-260px)] text-justify leading-relaxed text-cream-800 dark:text-white',
       },
     },
   });
@@ -141,15 +138,25 @@ export const RichEditor: React.FC<RichEditorProps> = ({
     }
   };
 
-  const handleRenderMarkdown = () => {
-    if (!editor) return;
-    // Paragraph, heading and list breaks have to survive as newlines, otherwise
-    // block patterns such as "# Heading" or "- item" can never match (and
-    // entities like &amp; would be parsed as literal "&amp;" text).
-    const plainText = htmlToPlainText(editor.getHTML());
-    if (!hasMarkdown(plainText)) return;
-    editor.commands.setContent(markdownToHtml(plainText));
-  };
+  const decreaseFontSize = () => setFontSize((s) => Math.max(12, s - 2));
+  const increaseFontSize = () => setFontSize((s) => Math.min(32, s + 2));
+  const resetFontSize = () => setFontSize(16);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (isFullscreen || !(e.ctrlKey || e.metaKey) || !e.shiftKey) return;
+      if (e.key === '[') {
+        e.preventDefault();
+        decreaseFontSize();
+      }
+      if (e.key === ']') {
+        e.preventDefault();
+        increaseFontSize();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isFullscreen]);
 
   return (
     <div className={`flex flex-col flex-1 min-h-0 ${isFullscreen ? 'fixed inset-0 z-50 bg-cream-50 dark:bg-navy-950' : ''}`}>
@@ -229,20 +236,29 @@ export const RichEditor: React.FC<RichEditorProps> = ({
 
           <div className="flex items-center gap-1 px-1">
             <button
-              onClick={() => setFontSize((s) => Math.max(12, s - 2))}
+              onClick={decreaseFontSize}
               className="px-2 py-1 text-xs border border-cream-400 dark:border-navy-700 rounded hover:bg-cream-200 dark:hover:bg-navy-800"
-              title="Decrease Font Size"
+              title="Decrease Font Size (Ctrl+Shift+[)"
             >
               A-
             </button>
             <span className="text-xs w-6 text-center text-cream-600 dark:text-gray-300">{fontSize}</span>
             <button
-              onClick={() => setFontSize((s) => Math.min(32, s + 2))}
+              onClick={increaseFontSize}
               className="px-2 py-1 text-xs border border-cream-400 dark:border-navy-700 rounded hover:bg-cream-200 dark:hover:bg-navy-800"
-              title="Increase Font Size"
+              title="Increase Font Size (Ctrl+Shift+])"
             >
               A+
             </button>
+            {fontSize !== 16 && (
+              <button
+                onClick={resetFontSize}
+                className="px-2 py-1 text-xs border border-cream-400 dark:border-navy-700 rounded hover:bg-cream-200 dark:hover:bg-navy-800 text-cream-500 dark:text-gray-400"
+                title="Reset Font Size"
+              >
+                Reset
+              </button>
+            )}
           </div>
 
           <div className="w-px h-5 mx-1 bg-cream-400 dark:bg-navy-700" />
@@ -253,14 +269,6 @@ export const RichEditor: React.FC<RichEditorProps> = ({
             title="Remove Extra Blank Lines"
           >
             <Eraser size={18} className="text-amber-600 dark:text-amber-400" />
-          </button>
-
-          <button
-            onClick={handleRenderMarkdown}
-            className="p-2 rounded hover:bg-cream-200 dark:hover:bg-navy-800"
-            title="Render Markdown"
-          >
-            <FileText size={18} className="text-amber-600 dark:text-amber-400" />
           </button>
 
           <div className="w-px h-5 mx-1 bg-cream-400 dark:bg-navy-700" />
