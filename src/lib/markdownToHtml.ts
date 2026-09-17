@@ -7,7 +7,13 @@
  *     such as `5 < 10` or a copied `<div>` arrives as text and never as tags.
  *  2. Code spans are held aside while emphasis is applied, so `**literal**`
  *     inside backticks is not expanded.
+ *
+ * Math support: $...$ inline and $$...$$ block math blocks are rendered
+ * using KaTeX, with \text{...} commands removed (their content is treated as
+ * regular math text).
  */
+
+import katex from 'katex';
 
 const HTML_ESCAPES: Record<string, string> = {
   '&': '&amp;',
@@ -27,6 +33,90 @@ const HOLD_RE = /\u0000(\d+)\u0000/g;
 /** A tab stop counts as four columns, as in CommonMark. */
 const indentWidth = (whitespace: string): number =>
   whitespace.replace(/\t/g, '    ').length;
+
+/** Render a math expression using KaTeX. */
+const renderMath = (mathContent: string, inline: boolean): string => {
+  try {
+    const processed = mathContent.replace(
+      /\\([a-zA-Z]{2,})/g,
+      (_match, name: string) => {
+        const known = new Set([
+          'text', 'frac', 'sqrt', 'frac', 'overline', 'underline',
+          'overline', 'tilde', 'hat', 'vec', 'bar', 'dot', 'ddot',
+          'acute', 'grave', 'check', 'breve', 'underline',
+          'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta',
+          'theta', 'iota', 'kappa', 'lambda', 'mu', 'nu', 'xi', 'pi',
+          'rho', 'sigma', 'tau', 'upsilon', 'phi', 'chi', 'psi', 'omega',
+          'Gamma', 'Delta', 'Theta', 'Lambda', 'Xi', 'Pi', 'Sigma',
+          'Upsilon', 'Phi', 'Psi', 'Omega',
+          'sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'arcsin', 'arccos',
+          'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'lim', 'min',
+          'max', 'sum', 'prod', 'int', 'oint', 'det', 'dim', 'hom',
+          'ker', 'exp', 'gcd', 'lcm', 'mod', 'deg', 'Pr',
+          'leq', 'geq', 'neq', 'approx', 'sim', 'cong', 'in', 'ni',
+          'subset', 'supset', 'subseteq', 'supseteq', 'perp',
+          'parallel', 'cdot', 'times', 'div', 'pm', 'mp',
+          'infty', 'partial', 'nabla', 'infty',
+          'Rightarrow', 'Leftarrow', 'Leftrightarrow', 'Longrightarrow',
+          'Longrightarrow', 'Rightarrow', 'leftrightarrow',
+        ]);
+        if (known.has(name)) return _match;
+        return name;
+      }
+    );
+    return katex.renderToString(processed.trim(), {
+      throwOnError: false,
+      displayMode: !inline,
+      output: 'html',
+      trust: true,
+    });
+  } catch {
+    return escapeHtml(mathContent);
+  }
+};
+
+/** Extracts math blocks from text and provides a restore function. */
+const extractMath = (text: string): { textWithoutMath: string; restoreMath: (html: string) => string } => {
+  interface MathBlock {
+    type: 'block' | 'inline';
+    content: string;
+    index: number;
+  }
+
+  const mathBlocks: MathBlock[] = [];
+  let processed = text;
+
+  // Extract block math ($$...$$) first
+  processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (_match, content) => {
+    // Remove \text{...} wrappers
+    const processedContent = content.replace(/\\text\{(.*?)\}/g, '$1');
+    const idx = mathBlocks.length;
+    mathBlocks.push({ type: 'block', content: processedContent, index: idx });
+    return `\u0003${idx}\u0003`;
+  });
+
+  // Then extract inline math ($...$)
+  processed = processed.replace(/\$(.*?)\$/g, (_match, content) => {
+    // Remove \text{...} wrappers
+    const processedContent = content.replace(/\\text\{(.*?)\}/g, '$1');
+    const idx = mathBlocks.length;
+    mathBlocks.push({ type: 'inline', content: processedContent, index: idx });
+    return `\u0004${idx}\u0004`;
+  });
+
+  const restoreMath = (html: string): string => {
+    let result = html;
+    for (let i = 0; i < mathBlocks.length; i++) {
+      const block = mathBlocks[i];
+      const rendered = renderMath(block.content, block.type === 'inline');
+      result = result.replace(new RegExp(`\\u0003${i}\\u0003`, 'g'), rendered);
+      result = result.replace(new RegExp(`\\u0004${i}\\u0004`, 'g'), rendered);
+    }
+    return result;
+  };
+
+  return { textWithoutMath: processed, restoreMath };
+};
 
 /** Converts the inline syntax of one line: escapes, code, then emphasis. */
 const inline = (line: string): string => {
@@ -64,7 +154,11 @@ const inline = (line: string): string => {
   out = out.replace(/(^|[^\w*])\*(\S(?:[^*]*\S)?)\*/g, '$1<em>$2</em>');
   out = out.replace(/(^|[^\w_])_(\S(?:[^_]*\S)?)_(?!\w)/g, '$1<em>$2</em>');
 
-  return out.replace(HOLD_RE, (_match, index: string) => held[Number(index)] ?? '');
+  // Restore placeholders in reverse order: first held (escape placeholders
+  // are \u0000, math placeholders use \u0003/\u0004 which survive escapeHtml).
+  out = out.replace(HOLD_RE, (_match, index: string) => held[Number(index)] ?? '');
+
+  return out;
 };
 
 /** One level of the list stack used while parsing block structure. */
@@ -74,10 +168,19 @@ interface ListFrame {
   itemOpen: boolean;
 }
 
+/**
+ * Renders markdown to HTML, including LaTeX math expressions using KaTeX.
+ * \text{...} commands inside math are removed, treating their content as
+ * regular math text (which will be italicized and have spaces ignored).
+ */
 export const markdownToHtml = (text: string): string => {
   if (!text || !text.trim()) return '';
 
-  const lines = text.replace(/\r\n?/g, '\n').split('\n');
+  // First, extract math blocks and replace with placeholders
+  const { textWithoutMath, restoreMath } = extractMath(text);
+
+  // Then process the remaining markdown
+  const lines = textWithoutMath.replace(/\r\n?/g, '\n').split('\n');
   const html: string[] = [];
   const lists: ListFrame[] = [];
   const paragraph: string[] = [];
@@ -239,7 +342,8 @@ export const markdownToHtml = (text: string): string => {
   flushParagraph();
   closeLists();
 
-  return html.join('');
+  const result = html.join('');
+  return restoreMath(result);
 };
 
 /**
@@ -257,6 +361,9 @@ export const hasMarkdown = (text: string): boolean =>
       // are not mistaken for Markdown.
       '(?:^|[^\\w*])\\*[^\\s*](?:[^*]*[^\\s*])?\\*',
       '(?:^|[^\\w_])_[^\\s_](?:[^_]*[^\\s_])?_(?!\\w)',
+      // Math: $...$ or $$...$$ patterns
+      '\\$[^$]+\\$',
+      '\\$\\$[^$]+\\$\\$',
       // Blocks: headings, quotes, bullets, numbered items and rules.
       '^[ \\t]{0,3}#{1,6}[ \\t]',
       '^[ \\t]*>[ \\t]',

@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* KaTeX math rendering styles - import via postcss-import or similar would be better,
+   but for now we'll rely on the built katex CSS from node_modules being copied during build */
+
 @layer utilities {
   .folder-scroll {
     scrollbar-width: none;
@@ -189,5 +192,19 @@
 
   .tiptap pre code {
     @apply p-0 bg-transparent text-inherit;
+  }
+
+  /* Inline math: $...$ blocks. \text{...} inside them becomes italic. */
+  .tiptap .math {
+    @apply font-mono text-cream-800 dark:text-gray-200;
+  }
+
+  /* KaTeX math styling */
+  .tiptap .katex {
+    @apply text-cream-800 dark:text-gray-200;
+  }
+
+  .dark .tiptap .katex {
+    color: #f1f5f9;
   }
 }
