@@ -19,6 +19,7 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  Heading4,
   AlignJustify,
   AlignCenter,
   AlignLeft,
@@ -275,13 +276,21 @@ export const RichEditor: React.FC<RichEditorProps> = ({
              <Heading2 size={18} className="text-amber-600 dark:text-amber-400" />
            </button>
 
-           <button
-             onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-             className={`p-2 rounded hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('heading', { level: 3 }) ? 'bg-cream-300 dark:bg-navy-700' : ''}`}
-             title="Heading 3"
-           >
-             <Heading3 size={18} className="text-amber-600 dark:text-amber-400" />
-           </button>
+            <button
+              onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+              className={`p-2 rounded hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('heading', { level: 3 }) ? 'bg-cream-300 dark:bg-navy-700' : ''}`}
+              title="Heading 3"
+            >
+              <Heading3 size={18} className="text-amber-600 dark:text-amber-400" />
+            </button>
+
+            <button
+              onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
+              className={`p-2 rounded hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('heading', { level: 4 }) ? 'bg-cream-300 dark:bg-navy-700' : ''}`}
+              title="Heading 4"
+            >
+              <Heading4 size={18} className="text-amber-600 dark:text-amber-400" />
+            </button>
 
            <div className="w-px h-5 mx-1 bg-cream-400 dark:bg-navy-700" />
 
@@ -453,16 +462,24 @@ export const RichEditor: React.FC<RichEditorProps> = ({
                >
                  <Italic size={16} aria-hidden="true" />
                </button>
-               <button
-                 onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-                 className={`p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('heading', { level: 2 }) ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'text-cream-700 dark:text-gray-200'}`}
-                 title="Heading 2"
-                 aria-label="Heading 2"
-               >
-                 <Heading2 size={16} aria-hidden="true" />
-               </button>
-               <button
-                 onClick={() => editor.chain().focus().toggleBulletList().run()}
+                <button
+                  onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                  className={`p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('heading', { level: 2 }) ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'text-cream-700 dark:text-gray-200'}`}
+                  title="Heading 2"
+                  aria-label="Heading 2"
+                >
+                  <Heading2 size={16} aria-hidden="true" />
+                </button>
+                <button
+                  onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
+                  className={`p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('heading', { level: 4 }) ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'text-cream-700 dark:text-gray-200'}`}
+                  title="Heading 4"
+                  aria-label="Heading 4"
+                >
+                  <Heading4 size={16} aria-hidden="true" />
+                </button>
+                <button
+                  onClick={() => editor.chain().focus().toggleBulletList().run()}
                  className={`p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('bulletList') ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'text-cream-700 dark:text-gray-200'}`}
                  title="Bullet list"
                  aria-label="Bullet list"

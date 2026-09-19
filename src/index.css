@@ -138,6 +138,7 @@
   }
 
   .tiptap h4 {
+    @apply text-rose-600 dark:text-rose-400;
     font-size: 1.125rem;
   }
 
