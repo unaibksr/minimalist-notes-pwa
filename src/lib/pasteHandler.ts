@@ -6,20 +6,18 @@ export const MarkdownPasteHandler = Extension.create({
   name: 'markdownPasteHandler',
 
   addProseMirrorPlugins() {
-    const editorRef = this.editor;
     return [
       new Plugin({
         key: new PluginKey('markdownPasteHandler'),
         props: {
-          handlePaste(_view, event) {
+          handlePaste: (_view, event) => {
             const text = event.clipboardData?.getData('text/plain');
-            if (!text) return false;
-
+            if (!text || !text.trim()) return false;
             if (!hasMarkdown(text)) return false;
 
             event.preventDefault();
             const html = markdownToHtml(text);
-            editorRef!.commands.insertContent(html);
+            this.editor.commands.insertContent(html);
             return true;
           },
         },

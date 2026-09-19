@@ -207,4 +207,27 @@
   .dark .tiptap .katex {
     color: #f1f5f9;
   }
+
+  /* Tiptap table styling */
+  .tiptap table {
+    @apply border-collapse w-full my-2;
+  }
+  .tiptap table td,
+  .tiptap table th {
+    @apply border border-cream-300 dark:border-navy-600 p-2 text-sm text-cream-800 dark:text-white;
+  }
+  .tiptap table th {
+    @apply bg-cream-200 dark:bg-navy-800 font-semibold;
+  }
+  .tiptap table td:first-child,
+  .tiptap table th:first-child {
+    @apply pl-3;
+  }
+  .tiptap table td:last-child,
+  .tiptap table th:last-child {
+    @apply pr-3;
+  }
+  .tiptap .tableWrapper {
+    @apply overflow-x-auto;
+  }
 }

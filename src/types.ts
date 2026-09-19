@@ -8,6 +8,8 @@ export interface Note {
   folderId?: string | null;
   pinned?: boolean;
   tags?: string[];
+  wordCount?: number;
+  readingTime?: number;
 }
 
 export interface Folder {
