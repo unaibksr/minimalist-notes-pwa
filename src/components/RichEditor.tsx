@@ -12,6 +12,7 @@ import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import Strike from '@tiptap/extension-strike';
 import { MarkdownPasteHandler } from '../lib/pasteHandler';
+import { markdownToHtml, hasMarkdown } from '../lib/markdownToHtml';
 import {
   Bold,
   Italic,
@@ -162,6 +163,18 @@ export const RichEditor: React.FC<RichEditorProps> = ({
     if (html !== cleaned) {
       editor.commands.setContent(cleaned);
     }
+  };
+
+  const renderMarkdown = () => {
+    if (!editor) return;
+    const text = editor.getText();
+    if (!text.trim()) return;
+    if (!hasMarkdown(text)) {
+      // Could show a toast here, but keeping it simple
+      return;
+    }
+    const html = markdownToHtml(text);
+    editor.commands.setContent(html, false);
   };
 
   const decreaseFontSize = () => setFontSize((s) => Math.max(12, s - 2));
@@ -343,15 +356,25 @@ export const RichEditor: React.FC<RichEditorProps> = ({
              )}
            </div>
 
-           <div className="w-px h-5 mx-1 bg-cream-400 dark:bg-navy-700" />
+<div className="w-px h-5 mx-1 bg-cream-400 dark:bg-navy-700" />
 
-           <button
-             onClick={cleanBlankLines}
-             className="p-2 rounded hover:bg-cream-200 dark:hover:bg-navy-800"
-             title="Remove Extra Blank Lines"
-           >
-             <Eraser size={18} className="text-amber-600 dark:text-amber-400" />
-           </button>
+            <button
+              onClick={cleanBlankLines}
+              className="p-2 rounded hover:bg-cream-200 dark:hover:bg-navy-800"
+              title="Remove Extra Blank Lines"
+            >
+              <Eraser size={18} className="text-amber-600 dark:text-amber-400" />
+            </button>
+
+            <div className="w-px h-5 mx-1 bg-cream-400 dark:bg-navy-700" />
+
+            <button
+              onClick={renderMarkdown}
+              className="p-2 rounded hover:bg-cream-200 dark:hover:bg-navy-800"
+              title="Render Markdown"
+            >
+              <Eye size={18} className="text-amber-600 dark:text-amber-400" />
+            </button>
 
            <div className="w-px h-5 mx-1 bg-cream-400 dark:bg-navy-700" />
 
