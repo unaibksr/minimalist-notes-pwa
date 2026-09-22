@@ -128,11 +128,12 @@
     @apply text-amber-600 dark:text-amber-400;
   }
 
-  /* Urdu text uses Noori Nastaliq (Noori Nasto) font via Google Fonts */
+  /* Urdu text uses Noto Nastaliq Urdu (Google Fonts), with fallbacks for
+     system-installed Noori Nastaleeq / Jameel Noori Nastaleeq. */
   .tiptap .urdu-text,
   .tiptap p.urdu-text,
   .tiptap .urdu-text * {
-    font-family: 'Noori Nasto', 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', sans-serif !important;
+    font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Noori Nastaleeq', 'Jameel Noori Nastaleeq Kasheeda', sans-serif !important;
     font-size: 1.15em;
     line-height: 1.8;
     direction: rtl;
