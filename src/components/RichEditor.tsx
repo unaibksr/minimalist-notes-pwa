@@ -13,6 +13,7 @@ import Underline from '@tiptap/extension-underline';
 import Strike from '@tiptap/extension-strike';
 import { MarkdownPasteHandler } from '../lib/pasteHandler';
 import { markdownToHtml, hasMarkdown } from '../lib/markdownToHtml';
+import { UrduText } from '../lib/urduText';
 import {
   Bold,
   Italic,
@@ -42,6 +43,7 @@ import {
   Link2,
   Image as ImageIcon,
   Eye,
+  Languages,
 } from 'lucide-react';
 
 interface RichEditorProps {
@@ -103,6 +105,7 @@ export const RichEditor: React.FC<RichEditorProps> = ({
         placeholder: 'Start typing your note...',
       }),
       MarkdownPasteHandler,
+      UrduText,
     ],
     content,
     onUpdate: ({ editor }) => {
@@ -176,6 +179,11 @@ export const RichEditor: React.FC<RichEditorProps> = ({
     }
     const html = markdownToHtml(text);
     editor.commands.setContent(html, false);
+  };
+
+  const toggleUrduText = () => {
+    if (!editor) return;
+    editor.chain().focus().toggleUrdu().run();
   };
 
   const decreaseFontSize = () => setFontSize((s) => Math.max(12, s - 2));
@@ -373,9 +381,17 @@ export const RichEditor: React.FC<RichEditorProps> = ({
               title="Remove Extra Blank Lines"
             >
               <Eraser size={18} className="text-amber-600 dark:text-amber-400" />
+</button>
+
+            <button
+              onClick={toggleUrduText}
+              className={`p-2 rounded hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('urdu') ? 'bg-cream-300 dark:bg-navy-700' : ''}`}
+              title="Urdu Text (Noori Nastaliq)"
+            >
+              <Languages size={18} className="text-amber-600 dark:text-amber-400" />
             </button>
 
-            <div className="w-px h-5 mx-1 bg-cream-400 dark:bg-navy-700" />
+           <div className="w-px h-5 mx-1 bg-cream-400 dark:bg-navy-700" />
 
             <button
               onClick={renderMarkdown}
@@ -478,14 +494,22 @@ export const RichEditor: React.FC<RichEditorProps> = ({
                 >
                   <Heading4 size={16} aria-hidden="true" />
                 </button>
-                <button
+<button
                   onClick={() => editor.chain().focus().toggleBulletList().run()}
-                 className={`p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('bulletList') ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'text-cream-700 dark:text-gray-200'}`}
-                 title="Bullet list"
-                 aria-label="Bullet list"
-               >
-                 <List size={16} aria-hidden="true" />
-               </button>
+                  className={`p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('bulletList') ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'text-cream-700 dark:text-gray-200'}`}
+                  title="Bullet list"
+                  aria-label="Bullet list"
+                >
+                  <List size={16} aria-hidden="true" />
+                </button>
+                <button
+                  onClick={toggleUrduText}
+                  className={`p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('urdu') ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'text-cream-700 dark:text-gray-200'}`}
+                  title="Urdu Text (Noori Nastaliq)"
+                  aria-label="Urdu Text"
+                >
+                  <Languages size={16} aria-hidden="true" />
+                </button>
                <button
                  onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
                  className="p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800"
