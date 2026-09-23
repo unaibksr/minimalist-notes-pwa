@@ -37,13 +37,12 @@ import {
   Table2,
   Sigma,
   Sparkles,
+  Code,
   Underline as UnderlineIcon,
   Strikethrough,
-  Code,
   Link2,
   Image as ImageIcon,
   Eye,
-  Languages,
 } from 'lucide-react';
 
 interface RichEditorProps {
@@ -371,9 +370,9 @@ export const RichEditor: React.FC<RichEditorProps> = ({
                  Reset
                </button>
              )}
-           </div>
+            </div>
 
-<div className="w-px h-5 mx-1 bg-cream-400 dark:bg-navy-700" />
+            <div className="w-px h-5 mx-1 bg-cream-400 dark:bg-navy-700" />
 
             <button
               onClick={cleanBlankLines}
@@ -386,9 +385,9 @@ export const RichEditor: React.FC<RichEditorProps> = ({
             <button
               onClick={toggleUrduText}
               className={`p-2 rounded hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('urdu') ? 'bg-cream-300 dark:bg-navy-700' : ''}`}
-              title="Urdu Text (Noori Nastaliq)"
+              title="Urdu Text (Noto Nastaliq Urdu)"
             >
-              <Languages size={18} className="text-amber-600 dark:text-amber-400" />
+                   <span style={{ fontFamily: "'Noto Nastaliq Urdu', 'Noto Nastaliq', sans-serif" }} className="text-amber-600 dark:text-amber-400 text-base">ن</span>
             </button>
 
            <div className="w-px h-5 mx-1 bg-cream-400 dark:bg-navy-700" />
@@ -505,10 +504,10 @@ export const RichEditor: React.FC<RichEditorProps> = ({
                 <button
                   onClick={toggleUrduText}
                   className={`p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('urdu') ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'text-cream-700 dark:text-gray-200'}`}
-                  title="Urdu Text (Noori Nastaliq)"
+title="Urdu Text (Noto Nastaliq Urdu)"
                   aria-label="Urdu Text"
                 >
-                  <Languages size={16} aria-hidden="true" />
+<span style={{ fontFamily: "'Noto Nastaliq Urdu', 'Noto Nastaliq', sans-serif" }} className="text-amber-600 dark:text-amber-400 text-base">ن</span>
                 </button>
                <button
                  onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
@@ -518,22 +517,23 @@ export const RichEditor: React.FC<RichEditorProps> = ({
                >
                  <Table2 size={16} aria-hidden="true" />
                </button>
-               <button
-                 onClick={() => setShowMathMenu(true)}
-                 className="p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800"
-                 title="Math"
-                 aria-label="Insert math formula"
-               >
-                 <Sigma size={16} className="text-amber-600 dark:text-amber-400" />
-               </button>
-               <button
-                 onClick={() => editor.chain().focus().toggleUnderline().run()}
-                 className={`p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('underline') ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'text-cream-700 dark:text-gray-200'}`}
-                 title="Underline"
-                 aria-label="Underline"
-               >
-                 <UnderlineIcon size={16} className="text-amber-600 dark:text-amber-400" />
-               </button>
+<button
+                   onClick={() => setShowMathMenu(true)}
+                   className="p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800"
+                   title="Math"
+                   aria-label="Insert math formula"
+                 >
+                   <Sigma size={16} className="text-amber-600 dark:text-amber-400" />
+                 </button>
+
+                <button
+                  onClick={() => editor.chain().focus().toggleUnderline().run()}
+                  className={`p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('underline') ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'text-cream-700 dark:text-gray-200'}`}
+                  title="Underline"
+                  aria-label="Underline"
+                >
+                  <UnderlineIcon size={16} className="text-amber-600 dark:text-amber-400" />
+                </button>
                <button
                  onClick={() => editor.chain().focus().toggleStrike().run()}
                  className={`p-2 rounded-md hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('strike') ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'text-cream-700 dark:text-gray-200'}`}
