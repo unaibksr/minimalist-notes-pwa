@@ -4,9 +4,11 @@ import {
   getNotesFromIDBForUI,
   saveNoteToIDB,
   deleteNoteFromIDB,
+  purgeNotesFromIDB,
   saveFolderToIDB,
   saveFoldersToIDB,
   deleteFolderFromIDB,
+  purgeFoldersFromIDB,
   getFoldersFromIDBForUI,
 } from './lib/db';
 import {
@@ -100,6 +102,7 @@ export const App: React.FC = () => {
   const [online, setOnline] = useState(navigator.onLine);
   const { mode: themeMode, setMode: setThemeMode, cycleMode: cycleThemeMode } = useTheme();
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle');
   const [refreshing, setRefreshing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMobile, setIsMobile] = useState(isMobileViewport());
@@ -141,8 +144,56 @@ export const App: React.FC = () => {
     return () => mediaQuery.removeEventListener('change', handler);
   }, []);
 
+  /**
+   * Serialised sync: only one sync runs at a time. If more syncs are requested
+   * while one is in flight, they are coalesced into a single trailing sync so we
+   * can never interleave pulls/writes or clobber newer state.
+   */
+  const runSync = useCallback(async () => {
+    if (!supabase) {
+      const localNotes = await getNotesFromIDBForUI();
+      const localFolders = await getFoldersFromIDBForUI();
+      const { next, changed } = ensureFolderColors(localFolders);
+      if (changed.length) await saveFoldersToIDB(changed);
+      setNotes(localNotes);
+      setFolders(next);
+      return;
+    }
+    if (!navigator.onLine) {
+      return;
+    }
+    if (syncRunning.current) {
+      syncPending.current = true;
+      return;
+    }
+    syncRunning.current = true;
+    setSyncStatus('syncing');
+    try {
+      do {
+        syncPending.current = false;
+        const result = await syncWithSupabase();
+        const { next, changed } = ensureFolderColors(result.folders);
+        if (changed.length) {
+          await saveFoldersToIDB(changed);
+          syncPending.current = true;
+        }
+        setNotes(result.notes);
+        setFolders(next);
+      } while (syncPending.current);
+      setSyncStatus('idle');
+    } catch (err) {
+      console.warn('Sync failed', err);
+      setSyncStatus('error');
+    } finally {
+      syncRunning.current = false;
+    }
+  }, []);
+
   useEffect(() => {
-    const on = () => setOnline(true);
+    const on = () => {
+      setOnline(true);
+      runSync();
+    };
     const off = () => setOnline(false);
     window.addEventListener('online', on);
     window.addEventListener('offline', off);
@@ -150,7 +201,7 @@ export const App: React.FC = () => {
       window.removeEventListener('online', on);
       window.removeEventListener('offline', off);
     };
-  }, []);
+  }, [runSync]);
 
   useEffect(() => {
     if (!copyMenuOpen) return;
@@ -169,45 +220,6 @@ export const App: React.FC = () => {
       document.removeEventListener('keydown', onKey);
     };
   }, [copyMenuOpen]);
-
-  /**
-   * Serialised sync: only one sync runs at a time. If more syncs are requested
-   * while one is in flight, they are coalesced into a single trailing sync so we
-   * can never interleave pulls/writes or clobber newer state.
-   */
-  const runSync = useCallback(async () => {
-    if (!supabase) {
-      const localNotes = await getNotesFromIDBForUI();
-      const localFolders = await getFoldersFromIDBForUI();
-      const { next, changed } = ensureFolderColors(localFolders);
-      if (changed.length) await saveFoldersToIDB(changed);
-      setNotes(localNotes);
-      setFolders(next);
-      return;
-    }
-    if (syncRunning.current) {
-      syncPending.current = true;
-      return;
-    }
-    syncRunning.current = true;
-    try {
-      do {
-        syncPending.current = false;
-        const result = await syncWithSupabase();
-        const { next, changed } = ensureFolderColors(result.folders);
-        if (changed.length) {
-          saveFoldersToIDB(changed);
-          syncPending.current = true;
-        }
-        setNotes(result.notes);
-        setFolders(next);
-      } while (syncPending.current);
-    } catch (err) {
-      console.warn('Sync failed', err);
-    } finally {
-      syncRunning.current = false;
-    }
-  }, []);
 
   // Sync when the tab regains focus or becomes visible again, and every 30 s.
   // This is the primary mechanism that keeps the app in sync across devices —
@@ -260,7 +272,8 @@ export const App: React.FC = () => {
     }) => {
       const { eventType, new: newData, old: oldData } = payload;
 
-      if (eventType === 'DELETE' && oldData) {
+      if (eventType === 'DELETE' && oldData?.id) {
+        purgeNotesFromIDB([oldData.id]);
         setNotes((prev) => prev.filter((n) => n.id !== oldData.id));
         return;
       }
@@ -272,11 +285,23 @@ export const App: React.FC = () => {
         content: newData.content,
         updatedAt: newData.updated_at,
         synced: true,
+        deleted: !!newData.deleted,
         folderId: newData.folder_id ?? null,
         pinned: !!newData.pinned,
       };
 
+      if (incoming.deleted) {
+        const existing = notesRef.current.find((n) => n.id === incoming.id);
+        if (existing && !existing.synced && existing.updatedAt > incoming.updatedAt) {
+          return;
+        }
+        saveNoteToIDB(incoming);
+        setNotes((prev) => prev.filter((n) => n.id !== incoming.id));
+        return;
+      }
+
       if (eventType === 'INSERT') {
+        saveNoteToIDB(incoming);
         setNotes((prev) => (prev.some((n) => n.id === incoming.id) ? prev : [incoming, ...prev]));
         return;
       }
@@ -287,6 +312,7 @@ export const App: React.FC = () => {
           // Local unsaved edits (or newer edits) win over a remote echo so we
           // never overwrite content the user is currently typing.
           if (!n.synced || n.updatedAt > incoming.updatedAt) return n;
+          saveNoteToIDB(incoming);
           return incoming;
         })
       );
@@ -301,7 +327,8 @@ export const App: React.FC = () => {
       old?: Record<string, any>;
     }) => {
       const { eventType, new: newData, old: oldData } = payload;
-      if (eventType === 'DELETE' && oldData) {
+      if (eventType === 'DELETE' && oldData?.id) {
+        purgeFoldersFromIDB([oldData.id]);
         setFolders((prev) => prev.filter((f) => f.id !== oldData.id));
         setActiveFolder((prev) => (prev === oldData.id ? 'all' : prev));
         return;
@@ -310,10 +337,21 @@ export const App: React.FC = () => {
       const incoming: Folder = {
         id: newData.id,
         name: newData.name,
+        color: newData.color ?? undefined,
         updatedAt: newData.updated_at,
         synced: true,
+        deleted: !!newData.deleted,
       };
+
+      if (incoming.deleted) {
+        saveFolderToIDB(incoming);
+        setFolders((prev) => prev.filter((f) => f.id !== incoming.id));
+        setActiveFolder((prev) => (prev === incoming.id ? 'all' : prev));
+        return;
+      }
+
       if (eventType === 'INSERT') {
+        saveFolderToIDB(incoming);
         setFolders((prev) =>
           prev.some((f) => f.id === incoming.id) ? prev : [incoming, ...prev]
         );
@@ -322,7 +360,8 @@ export const App: React.FC = () => {
           prev.map((f) => {
             if (f.id !== incoming.id) return f;
             if (!f.synced || f.updatedAt > incoming.updatedAt) return f;
-            return incoming;
+            saveFolderToIDB({ ...incoming, color: incoming.color ?? f.color });
+            return { ...incoming, color: incoming.color ?? f.color };
           })
         );
       }
@@ -724,6 +763,18 @@ export const App: React.FC = () => {
         label: 'Saving...',
         cls: 'text-primary-700 dark:text-primary-300 bg-primary-500/10 border-primary-500/30',
       }
+    : syncStatus === 'syncing'
+    ? {
+        dot: 'bg-primary-500 animate-pulse',
+        label: 'Syncing...',
+        cls: 'text-primary-700 dark:text-primary-300 bg-primary-500/10 border-primary-500/30',
+      }
+    : syncStatus === 'error'
+    ? {
+        dot: 'bg-red-500',
+        label: 'Sync error',
+        cls: 'text-red-700 dark:text-red-300 bg-red-500/10 border-red-500/30',
+      }
     : {
         dot: 'bg-emerald-500',
         label: 'Saved',
@@ -742,12 +793,12 @@ export const App: React.FC = () => {
       )}
 
       <aside
-        className={`w-full md:w-80 shrink-0 min-h-0 border-r border-cream-300 dark:border-navy-600 flex flex-col h-screen ${
+        className={`w-full md:w-80 shrink-0 min-h-0 bg-cream-100/60 dark:bg-navy-950 border-r border-cream-300 dark:border-navy-600 flex flex-col h-screen ${
           activeNoteId ? 'hidden md:flex' : ''
         }`}
       >
         <header className="px-4 py-3 border-b border-cream-300 dark:border-navy-600 flex items-center justify-between">
-          <h1 className="text-lg font-bold tracking-tight text-primary-700 dark:text-primary-400">
+          <h1 className="text-lg font-bold font-book dark:font-sans tracking-tight text-cream-800 dark:text-primary-400">
             Notes
           </h1>
           <div className="flex items-center gap-1.5">
@@ -762,12 +813,12 @@ export const App: React.FC = () => {
               <RefreshCw
                 size={18}
                 aria-hidden="true"
-                className={`text-primary-600 dark:text-primary-400 ${refreshing ? 'animate-spin' : ''}`}
+                className={`text-amber-700 dark:text-primary-400 ${refreshing ? 'animate-spin' : ''}`}
               />
             </button>
             <button
               onClick={createNewNote}
-              className="p-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-500 dark:text-primary-950 dark:hover:bg-primary-600 transition-colors"
+              className="p-2 rounded-lg bg-amber-600 text-cream-50 hover:bg-amber-700 dark:bg-primary-500 dark:text-primary-950 dark:hover:bg-primary-600 transition-colors"
               title="New note"
               aria-label="New note"
             >
@@ -811,8 +862,8 @@ export const App: React.FC = () => {
             onClick={() => setSidebarTab('notes')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               sidebarTab === 'notes'
-                ? 'bg-primary-600 text-white dark:bg-primary-500 dark:text-primary-950'
-                : 'text-cream-500 dark:text-gray-400 hover:bg-cream-200 dark:hover:bg-navy-800'
+                ? 'bg-amber-600 text-cream-50 dark:bg-primary-500 dark:text-primary-950'
+                : 'text-cream-600 dark:text-gray-400 hover:bg-cream-200 dark:hover:bg-navy-800'
             }`}
           >
             <NotebookPen size={13} aria-hidden="true" />
@@ -827,8 +878,8 @@ export const App: React.FC = () => {
             onClick={() => setSidebarTab('folders')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               sidebarTab === 'folders'
-                ? 'bg-primary-600 text-white dark:bg-primary-500 dark:text-primary-950'
-                : 'text-cream-500 dark:text-gray-400 hover:bg-cream-200 dark:hover:bg-navy-800'
+                ? 'bg-amber-600 text-cream-50 dark:bg-primary-500 dark:text-primary-950'
+                : 'text-cream-600 dark:text-gray-400 hover:bg-cream-200 dark:hover:bg-navy-800'
             }`}
           >
             <Folders size={13} aria-hidden="true" />
@@ -941,7 +992,7 @@ export const App: React.FC = () => {
       </aside>
 
       <main
-        className={`flex-1 min-h-0 flex flex-col h-screen overflow-hidden ${
+        className={`flex-1 min-h-0 flex flex-col h-screen overflow-hidden book-page ${
           !activeNoteId ? 'hidden md:flex' : ''
         }`}
       >
@@ -1103,7 +1154,7 @@ export const App: React.FC = () => {
                     onChange={(e) => handleUpdateNote('title', e.target.value)}
                     placeholder="Note Title"
                     aria-label="Note title"
-                    className="text-2xl md:text-3xl font-bold bg-transparent border-none outline-none mb-3 w-full text-cream-800 dark:text-white placeholder-cream-400 dark:placeholder-gray-600"
+                    className="text-2xl md:text-3xl font-bold font-book dark:font-sans bg-transparent border-none outline-none mb-3 w-full text-cream-800 dark:text-white placeholder-cream-400 dark:placeholder-gray-600"
                   />
                 </div>
               )}

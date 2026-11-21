@@ -69,8 +69,8 @@ export const NoteItem = React.memo(function NoteItem({
       onClick={() => onSelect(note.id)}
       className={`mx-2 my-1.5 px-3 py-2.5 rounded-xl cursor-pointer group relative border transition-all duration-150 ${
         active
-          ? 'bg-white dark:bg-navy-800 border-primary-500/50 ring-1 ring-primary-500/30 shadow-sm'
-          : 'bg-white dark:bg-navy-900/60 border-cream-200 dark:border-navy-800 hover:-translate-y-0.5 hover:shadow-md hover:border-cream-300 dark:hover:border-navy-700'
+          ? 'bg-cream-50 dark:bg-navy-800 border-amber-600/60 dark:border-primary-500/50 ring-1 ring-amber-600/25 dark:ring-primary-500/30 shadow-sm'
+          : 'bg-cream-100/70 dark:bg-navy-900/60 border-cream-300/70 dark:border-navy-800 hover:bg-cream-50 hover:-translate-y-0.5 hover:shadow-md hover:border-cream-300 dark:hover:border-navy-700'
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -80,11 +80,11 @@ export const NoteItem = React.memo(function NoteItem({
               <Pin
                 size={11}
                 aria-label="Pinned"
-                className="text-primary-600 dark:text-primary-400 fill-primary-600 dark:fill-primary-400 shrink-0"
+                className="text-amber-600 dark:text-primary-400 fill-amber-600 dark:fill-primary-400 shrink-0"
               />
             )}
             <h3
-              className="font-semibold text-sm truncate text-cream-800 dark:text-white"
+              className="font-semibold font-book dark:font-sans text-[15px] dark:text-sm truncate text-cream-800 dark:text-white"
               dangerouslySetInnerHTML={{ __html: titleHtml }}
             />
           </div>

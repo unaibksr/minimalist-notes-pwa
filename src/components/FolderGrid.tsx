@@ -25,9 +25,9 @@ type Editing = { mode: 'create' } | { mode: 'rename'; id: string } | null;
 const baseCard =
   'group relative flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-all cursor-pointer';
 const idleCard =
-  'bg-white dark:bg-navy-900/60 border-cream-200 dark:border-navy-800 hover:-translate-y-0.5 hover:shadow-md hover:border-cream-300 dark:hover:border-navy-700';
+  'bg-cream-100/70 dark:bg-navy-900/60 border-cream-300/70 dark:border-navy-800 hover:bg-cream-50 hover:-translate-y-0.5 hover:shadow-md hover:border-cream-300 dark:hover:border-navy-700';
 const activeCard =
-  'bg-white dark:bg-navy-800 border-amber-500 ring-2 ring-amber-500/40 shadow-sm';
+  'bg-cream-50 dark:bg-navy-800 border-amber-600 ring-2 ring-amber-500/35 shadow-sm';
 
 export const FolderGrid: React.FC<FolderGridProps> = ({
   folders,
@@ -102,7 +102,7 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
             }}
             placeholder="Folder name"
             aria-label="Folder name"
-            className="flex-1 px-2 py-1.5 text-xs rounded-md bg-white dark:bg-navy-950 border border-cream-300 dark:border-navy-600 text-cream-800 dark:text-white placeholder-cream-500 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-amber-400"
+            className="flex-1 px-2 py-1.5 text-xs rounded-md bg-cream-50 dark:bg-navy-950 border border-cream-300 dark:border-navy-600 text-cream-800 dark:text-white placeholder-cream-500 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-amber-400"
           />
           <button
             onClick={commit}

@@ -79,6 +79,28 @@ export const deleteNoteFromIDB = async (id: string) => {
   }
 };
 
+export const purgeNotesFromIDB = async (ids: string[]) => {
+  if (ids.length === 0) return;
+  const db = await initDB();
+  const tx = db.transaction('notes', 'readwrite');
+  const store = tx.objectStore('notes');
+  for (const id of ids) {
+    store.delete(id);
+  }
+  await tx.done;
+};
+
+export const purgeFoldersFromIDB = async (ids: string[]) => {
+  if (ids.length === 0) return;
+  const db = await initDB();
+  const tx = db.transaction('folders', 'readwrite');
+  const store = tx.objectStore('folders');
+  for (const id of ids) {
+    store.delete(id);
+  }
+  await tx.done;
+};
+
 export const saveFolderToIDB = async (folder: Folder) => {
   const db = await initDB();
   await db.put('folders', folder);

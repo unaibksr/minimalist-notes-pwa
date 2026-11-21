@@ -262,11 +262,11 @@ export const RichEditor: React.FC<RichEditorProps> = ({
   if (!editor) return null;
 
   return (
-    <div className={`flex flex-col flex-1 min-h-0 ${isFullscreen ? 'fixed inset-0 z-50 bg-cream-50 dark:bg-navy-950' : ''}`}>
+    <div className={`flex flex-col flex-1 min-h-0 ${isFullscreen ? 'fixed inset-0 z-50 bg-cream-50 dark:bg-navy-950 book-page' : ''}`}>
       {!isFullscreen && (
-        <div className="shrink-0 bg-cream-50 dark:bg-navy-950 border-b border-cream-300 dark:border-navy-600">
+        <div className="shrink-0 bg-transparent border-b border-cream-300 dark:border-navy-600">
           <div className="px-4 md:px-12 py-2">
-            <div className="flex flex-wrap items-center gap-1 p-2 border border-cream-300 dark:border-navy-600 bg-cream-50 dark:bg-navy-900 rounded-xl shadow-sm">
+            <div className="flex flex-wrap items-center gap-1 p-2 border border-cream-300 dark:border-navy-600 bg-cream-100/75 dark:bg-navy-900 rounded-xl shadow-sm">
            <button
              onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
              className={`p-2 rounded hover:bg-cream-200 dark:hover:bg-navy-800 ${editor.isActive('heading', { level: 1 }) ? 'bg-cream-300 dark:bg-navy-700' : ''}`}
@@ -548,11 +548,11 @@ title="Urdu Text (Noto Nastaliq Urdu)"
 
            <div className="flex items-center justify-between pt-4 mt-4 text-xs text-cream-500 dark:text-gray-400 border-t border-cream-300 dark:border-navy-600">
              <div className="flex items-center gap-1">
-               <Type size={12} className="text-primary-600 dark:text-primary-400" aria-hidden="true" />
+               <Type size={12} className="text-amber-600 dark:text-primary-400" aria-hidden="true" />
                <span>{wordCount.words} words</span>
              </div>
              <div className="flex items-center gap-1">
-               <Eye size={12} className="text-primary-600 dark:text-primary-400" aria-hidden="true" />
+               <Eye size={12} className="text-amber-600 dark:text-primary-400" aria-hidden="true" />
                <span>{wordCount.minutes} min read</span>
              </div>
              <div>

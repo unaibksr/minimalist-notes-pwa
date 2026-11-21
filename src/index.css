@@ -21,6 +21,25 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  html:not(.dark) body {
+    background-color: #fbf7ee;
+    color: #261e15;
+  }
+
+  /* Subtle warm paper grain & aged-page vignette in light mode */
+  html:not(.dark) .book-page {
+    background-color: #fbf7ee;
+    background-image:
+      radial-gradient(ellipse at center, rgba(251, 247, 238, 0) 60%, rgba(216, 201, 174, 0.24) 100%),
+      repeating-linear-gradient(
+        0deg,
+        rgba(120, 90, 50, 0.012) 0px,
+        rgba(120, 90, 50, 0.012) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+  }
+
   button:focus-visible,
   input:focus-visible,
   select:focus-visible,
@@ -31,15 +50,28 @@
   }
 
   ::selection {
+    background-color: theme('colors.amber.200');
+    color: theme('colors.cream.900');
+  }
+
+  .dark ::selection {
     background-color: theme('colors.primary.200');
     color: theme('colors.primary.950');
   }
 }
 
 @layer components {
-  /* Each heading level gets its own colour, in light and dark mode. */
+  /* Printed old-book typography in light mode; clean sans in dark mode */
+  html:not(.dark) .tiptap {
+    font-family: 'Newsreader', 'Lora', Georgia, Cambria, 'Times New Roman', serif;
+    line-height: 1.78;
+    letter-spacing: 0.004em;
+    color: #261e15;
+  }
+
+  /* Each heading level gets its own distinct, high-contrast ink colour on light paper and dark surface. */
   .tiptap h1 {
-    color: theme('colors.primary.700');
+    color: #1d4ed8; /* deep sapphire fountain-pen ink */
   }
 
   .dark .tiptap h1 {
@@ -47,7 +79,7 @@
   }
 
   .tiptap h2 {
-    color: theme('colors.indigo.600');
+    color: #6d28d9; /* deep manuscript violet ink */
   }
 
   .dark .tiptap h2 {
@@ -55,11 +87,21 @@
   }
 
   .tiptap h3 {
-    color: theme('colors.teal.700');
+    color: #047857; /* deep botanical emerald ink */
   }
 
   .dark .tiptap h3 {
     color: #6ee7b7; /* emerald-300 — vivid mint */
+  }
+
+  .tiptap h4 {
+    color: #be123c; /* deep crimson rubric ink */
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+
+  .dark .tiptap h4 {
+    color: #fb7185; /* rose-400 */
   }
 
   .tiptap h1 {
@@ -77,11 +119,10 @@
     font-weight: 600;
   }
 
-  /* Bold text renders in yellow: light yellow on the dark surface, and a
-     readable golden tone in light mode (pure light yellow would be invisible
-     on the off-white background). */
+  /* Bold text renders in high-contrast deep burnt sienna on warm paper, light yellow in dark mode. */
   .tiptap strong {
-    color: #a16207;
+    color: #9a3412;
+    font-weight: 700;
   }
 
   .dark .tiptap strong {
@@ -139,18 +180,12 @@
      margin-bottom: 0.5em;
    }
 
-  /* Headings below h3 — the toolbar stops at h3, but pasted Markdown can
-     contain h4–h6. */
-  .tiptap h4,
+  /* Headings below h4 — the toolbar stops at h4, but pasted Markdown can
+     contain h5–h6. */
   .tiptap h5,
   .tiptap h6 {
     @apply text-cream-700 dark:text-cream-200;
     font-weight: 600;
-  }
-
-  .tiptap h4 {
-    @apply text-rose-600 dark:text-rose-400;
-    font-size: 1.125rem;
   }
 
   .tiptap h5 {

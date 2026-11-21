@@ -31,8 +31,8 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ mode, onChange }) => (
           onClick={() => onChange(key)}
           className={`flex items-center justify-center min-w-[44px] min-h-[36px] rounded-md transition-colors active:scale-95 ${
             active
-              ? 'bg-white dark:bg-navy-700 text-primary-600 dark:text-primary-400 shadow-sm'
-              : 'text-cream-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400'
+              ? 'bg-cream-50 dark:bg-navy-700 text-amber-700 dark:text-primary-400 shadow-sm'
+              : 'text-cream-500 dark:text-gray-400 hover:text-amber-700 dark:hover:text-primary-400'
           }`}
         >
           <Icon size={16} aria-hidden />

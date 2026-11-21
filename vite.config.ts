@@ -17,8 +17,8 @@ export default defineConfig({
         name: 'Minimal Notes',
         short_name: 'Notes',
         description: 'A minimalist, mobile-first rich-text notes app with offline sync.',
-        theme_color: '#faf8f5',
-        background_color: '#faf8f5',
+        theme_color: '#fbf7ee',
+        background_color: '#fbf7ee',
         display: 'standalone',
         orientation: 'portrait',
         icons: [
