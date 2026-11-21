@@ -145,22 +145,14 @@ const inline = (line: string): string => {
   // Everything that is left is literal text.
   out = escapeHtml(out);
 
-  // Emphasis: bold+italic first, then strong/strike, then italic.
-  // Allow optional inner whitespace trimmed only when paired cleanly, while
-  // still leaving arithmetic like "5 * 3 * 2" untouched.
-  out = out.replace(/\*\*\*([^\n*](?:[^\n]*?[^\n*])?)\*\*\*/g, '<strong><em>$1</em></strong>');
-  out = out.replace(/___([^\n_](?:[^\n]*?[^\n_])?)___/g, '<strong><em>$1</em></strong>');
-  out = out.replace(/\*\*([^\s*](?:[^*\n]*?\S)?)\*\*/g, '<strong>$1</strong>');
-  out = out.replace(/__([^\s_](?:[^_\n]*?\S)?)__/g, '<strong>$1</strong>');
-  out = out.replace(/~~(\S(?:[^~\n]*\S)?)~~/g, '<s>$1</s>');
-  out = out.replace(/(^|[^\w*])\*(\S(?:[^*\n]*\S)?)\*/g, '$1<em>$2</em>');
-  out = out.replace(/(^|[^\w_])_(\S(?:[^_\n]*\S)?)_(?!\w)/g, '$1<em>$2</em>');
-
-  // Markdown links [text](https://...)
-  out = out.replace(
-    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
-  );
+  // Emphasis. Strong and strike run before emphasis, and a delimiter may not be
+  // followed (or preceded) by whitespace, so plain arithmetic like "5 * 3 * 2"
+  // is left alone.
+  out = out.replace(/\*\*(\S(?:[^*]*\S)?)\*\*/g, '<strong>$1</strong>');
+  out = out.replace(/__(\S(?:[^_]*\S)?)__/g, '<strong>$1</strong>');
+  out = out.replace(/~~(\S(?:[^~]*\S)?)~~/g, '<s>$1</s>');
+  out = out.replace(/(^|[^\w*])\*(\S(?:[^*]*\S)?)\*/g, '$1<em>$2</em>');
+  out = out.replace(/(^|[^\w_])_(\S(?:[^_]*\S)?)_(?!\w)/g, '$1<em>$2</em>');
 
   // Restore placeholders in reverse order: first held (escape placeholders
   // are \u0000, math placeholders use \u0003/\u0004 which survive escapeHtml).
@@ -181,33 +173,14 @@ interface ListFrame {
  * \text{...} commands inside math are removed, treating their content as
  * regular math text (which will be italicized and have spaces ignored).
  */
-const normalizeClipboardText = (text: string): string =>
-  text
-    .replace(/[\u200B-\u200D\uFEFF]/g, '')
-    .replace(/\u00A0/g, ' ')
-    .replace(/\r\n?/g, '\n');
-
-const splitTableRow = (line: string): string[] =>
-  line
-    .trim()
-    .replace(/^\|/, '')
-    .replace(/\|$/, '')
-    .split('|')
-    .map((cell) => cell.trim());
-
-const isTableSeparator = (line: string): boolean =>
-  /^\s*\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?\s*$/.test(line);
-
 export const markdownToHtml = (text: string): string => {
   if (!text || !text.trim()) return '';
 
-  const normalizedText = normalizeClipboardText(text);
-
   // First, extract math blocks and replace with placeholders
-  const { textWithoutMath, restoreMath } = extractMath(normalizedText);
+  const { textWithoutMath, restoreMath } = extractMath(text);
 
   // Then process the remaining markdown
-  const lines = textWithoutMath.split('\n');
+  const lines = textWithoutMath.replace(/\r\n?/g, '\n').split('\n');
   const html: string[] = [];
   const lists: ListFrame[] = [];
   const paragraph: string[] = [];
@@ -343,35 +316,7 @@ export const markdownToHtml = (text: string): string => {
       continue;
     }
 
-    // Markdown table: header row followed by | --- | --- | separator.
-    if (
-      index + 1 < lines.length &&
-      lines[index].includes('|') &&
-      isTableSeparator(lines[index + 1])
-    ) {
-      flushParagraph();
-      closeLists();
-      const headers = splitTableRow(lines[index]);
-      index += 2; // Skip header and separator.
-      const rows: string[][] = [];
-      while (index < lines.length && lines[index].includes('|') && lines[index].trim()) {
-        rows.push(splitTableRow(lines[index]));
-        index += 1;
-      }
-      const headHtml = `<thead><tr>${headers.map((h) => `<th>${inline(h)}</th>`).join('')}</tr></thead>`;
-      const bodyHtml = rows.length
-        ? `<tbody>${rows
-            .map(
-              (r) =>
-                `<tr>${headers.map((_, i) => `<td>${inline(r[i] ?? '')}</td>`).join('')}</tr>`
-            )
-            .join('')}</tbody>`
-        : '';
-      html.push(`<table>${headHtml}${bodyHtml}</table>`);
-      continue;
-    }
-
-    const bullet = line.match(/^(\s*)[-*+•]\s+(.*)$/);
+    const bullet = line.match(/^(\s*)[-*+]\s+(.*)$/);
     if (bullet) {
       flushParagraph();
       openListItem('ul', indentWidth(bullet[1]), bullet[2], 1);
@@ -419,13 +364,12 @@ export const hasMarkdown = (text: string): boolean =>
       // Math: $...$ or $$...$$ patterns
       '\\$[^$]+\\$',
       '\\$\\$[^$]+\\$\\$',
-      // Blocks: headings, quotes, bullets, numbered items, tables and rules.
+      // Blocks: headings, quotes, bullets, numbered items and rules.
       '^[ \\t]{0,3}#{1,6}[ \\t]',
       '^[ \\t]*>[ \\t]',
-      '^[ \\t]*[-*+•][ \\t]',
+      '^[ \\t]*[-*+][ \\t]',
       '^[ \\t]*\\d+[.)][ \\t]',
-      '^[ \\t]*\\|?(?:\\s*:?-{3,}:?\\s*\\|)+\\s*:?-{3,}:?\\s*\\|?\\s*$',
       '^[ \\t]{0,3}([-*_])([ \\t]*\\1){2,}[ \\t]*$',
     ].join('|'),
     'm'
-  ).test(normalizeClipboardText(text));
+  ).test(text);
