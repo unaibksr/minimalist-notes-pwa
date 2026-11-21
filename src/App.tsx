@@ -108,6 +108,8 @@ export const App: React.FC = () => {
   const [isMobile, setIsMobile] = useState(isMobileViewport());
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const titleFocusedRef = useRef(false);
   const copyMenuRef = useRef<HTMLDivElement>(null);
   const [copyMenuOpen, setCopyMenuOpen] = useState(false);
   const notesRef = useRef<Note[]>([]);
@@ -145,17 +147,44 @@ export const App: React.FC = () => {
   }, []);
 
   /**
+   * Merge notes returned from IDB/Supabase with current React state so an
+   * in-flight background sync can never clobber newer in-memory keystrokes.
+   */
+  const mergeSyncedNotes = useCallback((prev: Note[], syncedNotes: Note[]): Note[] => {
+    const prevById = new Map(prev.map((n) => [n.id, n]));
+    const seen = new Set<string>();
+    const merged = syncedNotes.map((remoteNote) => {
+      seen.add(remoteNote.id);
+      const localMem = prevById.get(remoteNote.id);
+      if (localMem && (!localMem.synced || localMem.updatedAt > remoteNote.updatedAt)) {
+        return localMem;
+      }
+      return remoteNote;
+    });
+    for (const localMem of prev) {
+      if (!seen.has(localMem.id) && !localMem.synced && !localMem.deleted) {
+        merged.unshift(localMem);
+      }
+    }
+    return merged;
+  }, []);
+
+  /**
    * Serialised sync: only one sync runs at a time. If more syncs are requested
    * while one is in flight, they are coalesced into a single trailing sync so we
    * can never interleave pulls/writes or clobber newer state.
    */
   const runSync = useCallback(async () => {
+    // Avoid racing with an active debounced edit; the save handler will trigger sync.
+    if (saveTimeoutRef.current !== null || titleFocusedRef.current) {
+      return;
+    }
     if (!supabase) {
       const localNotes = await getNotesFromIDBForUI();
       const localFolders = await getFoldersFromIDBForUI();
       const { next, changed } = ensureFolderColors(localFolders);
       if (changed.length) await saveFoldersToIDB(changed);
-      setNotes(localNotes);
+      setNotes((prev) => mergeSyncedNotes(prev, localNotes));
       setFolders(next);
       return;
     }
@@ -177,7 +206,7 @@ export const App: React.FC = () => {
           await saveFoldersToIDB(changed);
           syncPending.current = true;
         }
-        setNotes(result.notes);
+        setNotes((prev) => mergeSyncedNotes(prev, result.notes));
         setFolders(next);
       } while (syncPending.current);
       setSyncStatus('idle');
@@ -187,7 +216,7 @@ export const App: React.FC = () => {
     } finally {
       syncRunning.current = false;
     }
-  }, []);
+  }, [mergeSyncedNotes]);
 
   useEffect(() => {
     const on = () => {
@@ -553,17 +582,44 @@ export const App: React.FC = () => {
 
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(async () => {
+        saveTimeoutRef.current = null;
         // Persist the in-memory note directly instead of re-reading the store.
         const latest = notesRef.current.find((n) => n.id === id);
         if (latest) {
           await saveNoteToIDB(latest);
         }
         setSaveStatus('saved');
-        runSync();
-      }, 800);
+      }, 500);
+
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = setTimeout(() => {
+        syncTimeoutRef.current = null;
+        if (!titleFocusedRef.current) {
+          runSync();
+        }
+      }, 2000);
     },
     [runSync]
   );
+
+  const handleTitleBlur = useCallback(async () => {
+    titleFocusedRef.current = false;
+    const id = activeNoteIdRef.current;
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+      if (id) {
+        const latest = notesRef.current.find((n) => n.id === id);
+        if (latest) await saveNoteToIDB(latest);
+      }
+      setSaveStatus('saved');
+    }
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = null;
+    }
+    runSync();
+  }, [runSync]);
 
   const createNewNote = useCallback(async () => {
     const folder = activeFolder;
@@ -1151,6 +1207,10 @@ export const App: React.FC = () => {
                   <input
                     type="text"
                     value={activeNote.title}
+                    onFocus={() => {
+                      titleFocusedRef.current = true;
+                    }}
+                    onBlur={handleTitleBlur}
                     onChange={(e) => handleUpdateNote('title', e.target.value)}
                     placeholder="Note Title"
                     aria-label="Note title"
