@@ -144,11 +144,6 @@
     font-weight: 700;
   }
 
-  /* Headings that contain **bold** (common in Gemini/AI output) keep their heading color. */
-  .tiptap :is(h1, h2, h3, h4, h5, h6) strong {
-    color: inherit;
-  }
-
   .btn-amber {
     @apply bg-amber-600 hover:bg-amber-700 text-amber-900 dark:bg-amber-500 dark:text-amber-950 dark:hover:bg-amber-600;
   }
