@@ -155,6 +155,12 @@ export const RichEditor: React.FC<RichEditorProps> = ({
           'tiptap max-w-none focus:outline-none min-h-[calc(100vh-260px)] text-justify leading-relaxed text-cream-800 dark:text-gray-100',
       },
       handlePaste: (view, event) => {
+        const hasTextOrHtml = Boolean(
+          event.clipboardData?.getData('text/plain') ||
+            event.clipboardData?.getData('text/html')
+        );
+        if (hasTextOrHtml) return false;
+
         const items = event.clipboardData?.items;
         if (!items) return false;
         for (const item of Array.from(items)) {
