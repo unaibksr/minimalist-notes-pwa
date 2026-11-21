@@ -262,6 +262,14 @@
     @apply p-0 bg-transparent text-inherit;
   }
 
+  .tiptap a {
+    @apply text-amber-700 dark:text-sky-400 underline underline-offset-2 decoration-amber-600/50 dark:decoration-sky-400/50 hover:opacity-80 cursor-pointer;
+  }
+
+  .tiptap img {
+    @apply max-w-full h-auto rounded-lg my-3 border border-cream-300 dark:border-navy-600 shadow-sm;
+  }
+
   /* Inline math: $...$ blocks. \text{...} inside them becomes italic. */
   .tiptap .math {
     @apply font-mono text-cream-800 dark:text-gray-200;

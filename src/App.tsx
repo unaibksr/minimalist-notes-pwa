@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } from 'react';
 import { Note, Folder, FolderFilter } from './types';
 import {
   getNotesFromIDBForUI,
   saveNoteToIDB,
+  saveNotesToIDB,
   deleteNoteFromIDB,
   purgeNotesFromIDB,
   saveFolderToIDB,
@@ -18,6 +19,7 @@ import {
   detectSupabaseCapabilities,
 } from './lib/supabase';
 import { htmlToMarkdown, htmlToPlainText } from './lib/markdown';
+import { markdownToHtml } from './lib/markdownToHtml';
 import { folderColorClasses, pickFolderColor } from './lib/folderColors';
 import { useTheme } from './lib/useTheme';
 import { useSwipe } from './lib/useSwipe';
@@ -26,6 +28,7 @@ import { FolderGrid } from './components/FolderGrid';
 import { NoteItem } from './components/NoteItem';
 import { ThemeToggle } from './components/ThemeToggle';
 import { BottomNav } from './components/BottomNav';
+import { CommandPalette } from './components/CommandPalette';
 import {
   Search,
   Plus,
@@ -42,6 +45,8 @@ import {
   NotebookPen,
   Folders,
   ChevronRight,
+  ArrowUpDown,
+  Upload,
 } from 'lucide-react';
 
 const isMobileViewport = () => window.matchMedia('(max-width: 767px)').matches;
@@ -98,6 +103,16 @@ export const App: React.FC = () => {
   const [activeFolder, setActiveFolder] = useState<FolderFilter>('all');
   const [sidebarTab, setSidebarTab] = useState<'notes' | 'folders'>('notes');
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearch = useDeferredValue(searchQuery);
+  const [sortBy, setSortBy] = useState<'updated' | 'title'>(() => {
+    try {
+      return localStorage.getItem('notes-sort-by') === 'title' ? 'title' : 'updated';
+    } catch {
+      return 'updated';
+    }
+  });
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [online, setOnline] = useState(navigator.onLine);
   const { mode: themeMode, setMode: setThemeMode, cycleMode: cycleThemeMode } = useTheme();
@@ -412,6 +427,36 @@ export const App: React.FC = () => {
     return () => unsubscribe();
   }, [handleNoteChange, handleFolderChange]);
 
+  // Global keyboard shortcuts: Ctrl+K (Quick Switcher) and Ctrl+S (Save & Sync)
+  useEffect(() => {
+    const handler = async (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        const id = activeNoteIdRef.current;
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+          saveTimeoutRef.current = null;
+        }
+        if (syncTimeoutRef.current) {
+          clearTimeout(syncTimeoutRef.current);
+          syncTimeoutRef.current = null;
+        }
+        if (id) {
+          const latest = notesRef.current.find((n) => n.id === id);
+          if (latest) await saveNoteToIDB(latest);
+        }
+        setSaveStatus('saved');
+        await runSync();
+        showToast('Saved & synced');
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [runSync, showToast]);
+
   const activeNote = notes.find((n) => n.id === activeNoteId);
 
   const countsByFolder = useMemo(() => {
@@ -425,16 +470,19 @@ export const App: React.FC = () => {
 
   const visibleNotes = useMemo(
     () => {
-      const filtered = filterNotes(notes, activeFolder, searchQuery);
-      // Pinned notes float to the top, otherwise keep updatedAt-desc order.
+      const filtered = filterNotes(notes, activeFolder, deferredSearch);
+      // Pinned notes float to the top, otherwise sort by updatedAt-desc or title A-Z.
       return [...filtered].sort((a, b) => {
         const ap = a.pinned ? 1 : 0;
         const bp = b.pinned ? 1 : 0;
         if (ap !== bp) return bp - ap;
+        if (sortBy === 'title') {
+          return (a.title || 'Untitled Note').localeCompare(b.title || 'Untitled Note');
+        }
         return b.updatedAt - a.updatedAt;
       });
     },
-    [notes, activeFolder, searchQuery]
+    [notes, activeFolder, deferredSearch, sortBy]
   );
 
   const foldersById = useMemo(() => {
@@ -548,13 +596,109 @@ export const App: React.FC = () => {
   });
 
   const handleShare = useCallback(async () => {
+    const note = notesRef.current.find((n) => n.id === activeNoteIdRef.current);
+    if (note) {
+      const md = htmlToMarkdown(note.content);
+      const title = note.title || 'Untitled Note';
+      if (navigator.share) {
+        try {
+          await navigator.share({ title, text: `${title}\n\n${md}` });
+          return;
+        } catch (err) {
+          if ((err as Error)?.name === 'AbortError') return;
+        }
+      }
+      try {
+        await navigator.clipboard.writeText(`# ${title}\n\n${md}`);
+        showToast('Note copied to share');
+        return;
+      } catch {
+        // fall through
+      }
+    }
     try {
       await navigator.clipboard.writeText(window.location.href);
-      showToast('Share link copied');
+      showToast('App link copied');
     } catch {
-      showToast('Could not copy link');
+      showToast('Could not copy');
     }
   }, [showToast]);
+
+  const handleExportBackup = useCallback(() => {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      notes: notesRef.current,
+      folders,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `notes-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Backup exported');
+  }, [folders, showToast]);
+
+  const handleImportFile = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = '';
+      if (!file) return;
+      try {
+        const text = await file.text();
+        if (file.name.toLowerCase().endsWith('.json')) {
+          const parsed = JSON.parse(text);
+          const importedNotes: Note[] = Array.isArray(parsed?.notes) ? parsed.notes : [];
+          const importedFolders: Folder[] = Array.isArray(parsed?.folders) ? parsed.folders : [];
+          const now = Date.now();
+          const cleanFolders = importedFolders
+            .filter((f) => f && f.id && f.name)
+            .map((f) => ({ ...f, synced: false, updatedAt: f.updatedAt || now }));
+          const cleanNotes = importedNotes
+            .filter((n) => n && n.id)
+            .map((n) => ({
+              ...n,
+              title: n.title || 'Untitled Note',
+              content: n.content || '<p></p>',
+              synced: false,
+              updatedAt: n.updatedAt || now,
+            }));
+          if (cleanFolders.length) await saveFoldersToIDB(cleanFolders);
+          if (cleanNotes.length) await saveNotesToIDB(cleanNotes);
+          if (cleanFolders.length || cleanNotes.length) {
+            await runSync();
+            showToast(`Imported ${cleanNotes.length} notes`);
+          } else {
+            showToast('No notes found in backup');
+          }
+          return;
+        }
+        // Markdown or plain text file
+        const title = file.name.replace(/\.(md|markdown|txt)$/i, '') || 'Imported Note';
+        const newNote: Note = {
+          id: crypto.randomUUID(),
+          title,
+          content: markdownToHtml(text) || '<p></p>',
+          updatedAt: Date.now(),
+          synced: false,
+          folderId: activeFolder !== 'all' && activeFolder !== 'unfiled' ? activeFolder : null,
+        };
+        await saveNoteToIDB(newNote);
+        setNotes((prev) => [newNote, ...prev]);
+        setActiveNoteId(newNote.id);
+        runSync();
+        showToast(`Imported "${title}"`);
+      } catch {
+        showToast('Could not import file');
+      }
+    },
+    [activeFolder, runSync, showToast]
+  );
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -896,9 +1040,9 @@ export const App: React.FC = () => {
               aria-label="Search notes"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-8 py-2 text-sm bg-cream-100 dark:bg-navy-900 rounded-lg border border-transparent focus:border-amber-400 focus:bg-cream-50 dark:focus:bg-navy-950 focus:outline-none text-cream-800 dark:text-white placeholder-cream-500 dark:placeholder-gray-500 transition-colors"
+              className="w-full pl-9 pr-14 py-2 text-sm bg-cream-100 dark:bg-navy-950 rounded-lg border border-transparent focus:border-amber-400 focus:bg-cream-50 dark:focus:bg-navy-950 focus:outline-none text-cream-800 dark:text-white placeholder-cream-500 dark:placeholder-gray-500 transition-colors"
             />
-            {searchQuery && (
+            {searchQuery ? (
               <button
                 onClick={() => setSearchQuery('')}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-cream-400 dark:text-gray-500 hover:text-cream-700 dark:hover:text-gray-200"
@@ -906,6 +1050,15 @@ export const App: React.FC = () => {
                 aria-label="Clear search"
               >
                 <X size={13} aria-hidden="true" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setPaletteOpen(true)}
+                className="hidden md:inline-flex absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-medium rounded border border-cream-300 dark:border-navy-600 text-cream-500 dark:text-gray-400 hover:bg-cream-200 dark:hover:bg-navy-800"
+                title="Quick switcher (Ctrl+K)"
+              >
+                Ctrl+K
               </button>
             )}
           </div>
@@ -988,6 +1141,23 @@ export const App: React.FC = () => {
               <span className="text-[10px] text-cream-400 dark:text-gray-500">
                 {visibleNotes.length}
               </span>
+              <button
+                onClick={() => {
+                  const next = sortBy === 'updated' ? 'title' : 'updated';
+                  setSortBy(next);
+                  try {
+                    localStorage.setItem('notes-sort-by', next);
+                  } catch {
+                    // ignore
+                  }
+                }}
+                className="ml-auto inline-flex items-center gap-1 text-[11px] text-cream-500 dark:text-gray-400 hover:text-amber-700 dark:hover:text-primary-400 transition-colors"
+                title={`Sort by ${sortBy === 'updated' ? 'Title (A–Z)' : 'Last Updated'}`}
+                aria-label="Toggle note sort order"
+              >
+                <ArrowUpDown size={12} aria-hidden="true" />
+                <span>{sortBy === 'updated' ? 'Recent' : 'A–Z'}</span>
+              </button>
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto pt-1 pb-20 md:pb-1">
@@ -1036,13 +1206,29 @@ export const App: React.FC = () => {
           </>
         )}
 
-        <div className="p-3 border-t border-cream-300 dark:border-navy-600">
+        <div className="p-3 border-t border-cream-300 dark:border-navy-600 flex items-center gap-2">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".json,.md,.markdown,.txt"
+            className="hidden"
+            onChange={handleImportFile}
+          />
           <button
-            onClick={handleShare}
-            className="w-full flex items-center justify-center gap-1.5 text-xs font-medium bg-cream-100 dark:bg-navy-900 border border-cream-300 dark:border-navy-700 text-cream-600 dark:text-gray-300 px-2 py-2 rounded-lg hover:bg-cream-200 dark:hover:bg-navy-800 transition-colors"
+            onClick={handleExportBackup}
+            className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium bg-cream-100 dark:bg-navy-800 border border-cream-300 dark:border-navy-600 text-cream-600 dark:text-gray-300 px-2 py-2 rounded-lg hover:bg-cream-200 dark:hover:bg-navy-700 transition-colors"
+            title="Export full JSON backup"
           >
-            <Share2 size={13} aria-hidden="true" />
-            Copy share link
+            <Download size={13} aria-hidden="true" />
+            Backup
+          </button>
+          <button
+            onClick={() => importInputRef.current?.click()}
+            className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium bg-cream-100 dark:bg-navy-800 border border-cream-300 dark:border-navy-600 text-cream-600 dark:text-gray-300 px-2 py-2 rounded-lg hover:bg-cream-200 dark:hover:bg-navy-700 transition-colors"
+            title="Import JSON backup or Markdown file"
+          >
+            <Upload size={13} aria-hidden="true" />
+            Import
           </button>
         </div>
       </aside>
@@ -1302,6 +1488,16 @@ export const App: React.FC = () => {
           )}
         </div>
       )}
+
+      <CommandPalette
+        open={paletteOpen}
+        notes={notes}
+        onClose={() => setPaletteOpen(false)}
+        onSelectNote={handleSelectNote}
+        onCreateNote={createNewNote}
+        onCycleTheme={cycleThemeMode}
+        onExportBackup={handleExportBackup}
+      />
 
       <BottomNav
         onNotes={handleBackToList}

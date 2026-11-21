@@ -55,9 +55,15 @@ export const htmlToMarkdown = (html: string): string => {
   }
 };
 
+const plainTextCache = new Map<string, string>();
+const MAX_CACHE_SIZE = 500;
+
 export const htmlToPlainText = (html: string): string => {
   if (!html) return '';
-  return html
+  const cached = plainTextCache.get(html);
+  if (cached !== undefined) return cached;
+
+  const text = html
     .replace(/<(br|\/p|\/h[1-6]|\/li|\/div)>/gi, '\n')
     .replace(/<[^>]*>/g, '')
     .replace(/&nbsp;/g, ' ')
@@ -66,4 +72,11 @@ export const htmlToPlainText = (html: string): string => {
     .replace(/&gt;/g, '>')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+
+  if (plainTextCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = plainTextCache.keys().next().value;
+    if (firstKey !== undefined) plainTextCache.delete(firstKey);
+  }
+  plainTextCache.set(html, text);
+  return text;
 };
