@@ -64,10 +64,20 @@ const cleanPastedHtml = (rawHtml: string): string => {
     }
   });
 
-  // Convert <b> to <strong> and <i> to <em>, and strip noisy inline styles/classes
+  // Convert <b> to <strong> and <i> to <em>
   body.querySelectorAll('b').forEach((el) => replaceTag(el, 'strong'));
   body.querySelectorAll('i').forEach((el) => replaceTag(el, 'em'));
 
+  // Android/Chrome clipboard often wraps lines in <div> instead of <p>
+  body.querySelectorAll('div').forEach((div) => {
+    if (!div.querySelector('p, h1, h2, h3, h4, h5, h6, ul, ol, table, blockquote, pre, div')) {
+      replaceTag(div, 'p');
+    } else {
+      unwrapElement(div);
+    }
+  });
+
+  // Strip noisy inline styles/classes so the app's own heading & bold styles apply
   body.querySelectorAll('*').forEach((el) => {
     el.removeAttribute('class');
     el.removeAttribute('style');
@@ -91,7 +101,7 @@ export const MarkdownPasteHandler = Extension.create({
       new Plugin({
         key: new PluginKey('markdownPasteHandler'),
         props: {
-          handlePaste: (_view, event) => {
+          handlePaste: (view, event) => {
             const clipboard = event.clipboardData;
             if (!clipboard) return false;
 
@@ -103,7 +113,7 @@ export const MarkdownPasteHandler = Extension.create({
             if (plain && plain.trim() && hasMarkdown(plain)) {
               event.preventDefault();
               const html = markdownToHtml(plain);
-              this.editor.commands.insertContent(html);
+              view.pasteHTML(html, event);
               return true;
             }
 
@@ -113,7 +123,7 @@ export const MarkdownPasteHandler = Extension.create({
               const cleaned = cleanPastedHtml(rawHtml);
               if (cleaned) {
                 event.preventDefault();
-                this.editor.commands.insertContent(cleaned);
+                view.pasteHTML(cleaned, event);
                 return true;
               }
             }

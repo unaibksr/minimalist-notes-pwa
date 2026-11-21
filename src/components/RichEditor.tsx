@@ -247,7 +247,7 @@ export const RichEditor: React.FC<RichEditorProps> = ({
 
   const renderMarkdown = () => {
     if (!editor) return;
-    const text = editor.getText();
+    const text = editor.getText({ blockSeparator: '\n' });
     if (!text.trim() || !hasMarkdown(text)) return;
     const html = markdownToHtml(text);
     editor.commands.setContent(html, false);
