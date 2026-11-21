@@ -793,7 +793,7 @@ export const App: React.FC = () => {
       )}
 
       <aside
-        className={`w-full md:w-80 shrink-0 min-h-0 bg-cream-100/60 dark:bg-navy-950 border-r border-cream-300 dark:border-navy-600 flex flex-col h-screen ${
+        className={`w-full md:w-80 shrink-0 min-h-0 bg-cream-100/60 dark:bg-navy-900 border-r border-cream-300 dark:border-navy-600 flex flex-col h-screen ${
           activeNoteId ? 'hidden md:flex' : ''
         }`}
       >

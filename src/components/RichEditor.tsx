@@ -182,7 +182,11 @@ export const RichEditor: React.FC<RichEditorProps> = ({
 
   const toggleUrduText = () => {
     if (!editor) return;
-    editor.chain().focus().toggleUrdu().run();
+    if (editor.isActive('urdu')) {
+      editor.chain().focus().unsetMark('urdu').setTextAlign('justify').run();
+    } else {
+      editor.chain().focus().setMark('urdu').setTextAlign('right').run();
+    }
   };
 
   const decreaseFontSize = () => setFontSize((s) => Math.max(12, s - 2));

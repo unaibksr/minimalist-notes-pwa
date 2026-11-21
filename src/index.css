@@ -26,6 +26,15 @@
     color: #261e15;
   }
 
+  html.dark {
+    color-scheme: dark;
+  }
+
+  html.dark body {
+    background-color: #111214;
+    color: #e6e8ec;
+  }
+
   /* Subtle warm paper grain & aged-page vignette in light mode */
   html:not(.dark) .book-page {
     background-color: #fbf7ee;
@@ -61,12 +70,17 @@
 }
 
 @layer components {
-  /* Printed old-book typography in light mode; clean sans in dark mode */
+  /* Printed old-book typography in light mode; clean soft off-white in dark mode */
   html:not(.dark) .tiptap {
     font-family: 'Newsreader', 'Lora', Georgia, Cambria, 'Times New Roman', serif;
     line-height: 1.78;
     letter-spacing: 0.004em;
     color: #261e15;
+  }
+
+  html.dark .tiptap {
+    line-height: 1.75;
+    color: #e6e8ec;
   }
 
   /* Each heading level gets its own distinct, high-contrast ink colour on light paper and dark surface. */
@@ -101,7 +115,7 @@
   }
 
   .dark .tiptap h4 {
-    color: #fb7185; /* rose-400 */
+    color: #fda4af; /* rose-300 — high contrast on charcoal */
   }
 
   .tiptap h1 {
@@ -126,7 +140,8 @@
   }
 
   .dark .tiptap strong {
-    color: #fde047; /* yellow-300 — light yellow */
+    color: #fde047; /* yellow-300 — bright high-contrast yellow */
+    font-weight: 700;
   }
 
   .btn-amber {
@@ -169,7 +184,12 @@
     @apply text-amber-600 dark:text-amber-400;
   }
 
-/* Urdu text uses Noto Nastaliq Urdu (Google Fonts), with fallback. */
+/* Urdu text uses Noto Nastaliq Urdu (Google Fonts), with fallback, and aligns RTL/right. */
+   .tiptap :is(p, h1, h2, h3, h4, h5, h6, li):has(.urdu-text):not([style*="text-align: center"]):not([style*="text-align: left"]) {
+     direction: rtl;
+     text-align: right;
+   }
+
    .tiptap .urdu-text,
    .tiptap p.urdu-text,
    .tiptap .urdu-text * {
@@ -177,6 +197,7 @@
      font-size: 1.25em;
      line-height: 2.4;
      direction: rtl;
+     unicode-bidi: embed;
      margin-bottom: 0.5em;
    }
 
