@@ -142,100 +142,100 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-      <button
-        onClick={() => onSelect('all')}
-        className={`${baseCard} ${activeFolder === 'all' ? activeCard : idleCard}`}
-      >
-        <div className="flex items-center gap-1.5 w-full">
-          <Inbox size={14} className="text-cream-500 dark:text-gray-400" aria-hidden="true" />
-          <span className="font-medium text-sm text-cream-800 dark:text-white truncate">All Notes</span>
-        </div>
-        <span className="text-xs text-cream-500 dark:text-gray-400">{totalCount}</span>
-      </button>
-
-      <button
-        onClick={() => onSelect('unfiled')}
-        className={`${baseCard} ${activeFolder === 'unfiled' ? activeCard : idleCard}`}
-      >
-        <div className="flex items-center gap-1.5 w-full">
-          <span className="w-2.5 h-2.5 rounded-full bg-cream-400 dark:bg-gray-500" aria-hidden="true" />
-          <span className="font-medium text-sm text-cream-800 dark:text-white truncate">Unfiled</span>
-        </div>
-        <span className="text-xs text-cream-500 dark:text-gray-400">{unfiledCount}</span>
-      </button>
-
-      {folders.map((folder) => {
-        const active = activeFolder === folder.id;
-        const colors = folderColorClasses(folder.color);
-        return (
-          <div
-            key={folder.id}
-            className={`${baseCard} ${active ? activeCard : idleCard}`}
-            onClick={() => onSelect(folder.id)}
-            onDoubleClick={() => startRename(folder)}
-          >
-            <div className="flex items-center gap-1.5 w-full">
-              <span
-                className={`w-2.5 h-2.5 rounded-full shrink-0 ${colors.dot}`}
-                aria-hidden="true"
-              />
-              <span className="font-medium text-sm text-cream-800 dark:text-white truncate flex-1">
-                {folder.name}
-              </span>
+    <div className="flex flex-col gap-2">
+      <div className="grid grid-cols-2 gap-1.5">
+        <button
+          onClick={() => onSelect('all')}
+          className={`${baseCard} ${activeFolder === 'all' ? activeCard : idleCard}`}
+        >
+          <div className="flex items-center justify-between w-full gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Inbox size={14} className="text-cream-500 dark:text-gray-400 shrink-0" aria-hidden="true" />
+              <span className="font-medium text-sm text-cream-800 dark:text-white">All Notes</span>
             </div>
-            <div className="flex items-center justify-between w-full">
-              <span className="text-xs text-cream-500 dark:text-gray-400">
-                {countsByFolder[folder.id] || 0}
-              </span>
-              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    startRename(folder);
-                  }}
-                  className="p-1 rounded text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-cream-200 dark:hover:bg-navy-800 transition-colors"
-                  title="Rename folder"
-                  aria-label={`Rename ${folder.name}`}
-                >
-                  <Pencil size={12} aria-hidden="true" />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(folder);
-                  }}
-                  className="p-1 rounded text-cream-500 dark:text-gray-400 hover:text-red-500 hover:bg-cream-200 dark:hover:bg-navy-800 transition-colors"
-                  title="Delete folder"
-                  aria-label={`Delete ${folder.name}`}
-                >
-                  <Trash2 size={12} aria-hidden="true" />
-                </button>
+            <span className="text-xs text-cream-500 dark:text-gray-400 shrink-0">{totalCount}</span>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onSelect('unfiled')}
+          className={`${baseCard} ${activeFolder === 'unfiled' ? activeCard : idleCard}`}
+        >
+          <div className="flex items-center justify-between w-full gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-cream-400 dark:bg-gray-500 shrink-0" aria-hidden="true" />
+              <span className="font-medium text-sm text-cream-800 dark:text-white">Unfiled</span>
+            </div>
+            <span className="text-xs text-cream-500 dark:text-gray-400 shrink-0">{unfiledCount}</span>
+          </div>
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        {folders.map((folder) => {
+          const active = activeFolder === folder.id;
+          const colors = folderColorClasses(folder.color);
+          return (
+            <div
+              key={folder.id}
+              className={`group relative flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left transition-all cursor-pointer ${
+                active ? activeCard : idleCard
+              }`}
+              onClick={() => onSelect(folder.id)}
+              onDoubleClick={() => startRename(folder)}
+            >
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <span
+                  className={`w-2.5 h-2.5 rounded-full shrink-0 ${colors.dot}`}
+                  aria-hidden="true"
+                />
+                <span className="font-medium text-sm text-cream-800 dark:text-white break-words leading-snug">
+                  {folder.name}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startRename(folder);
+                    }}
+                    className="p-1 rounded text-cream-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-cream-200 dark:hover:bg-navy-800 transition-colors"
+                    title="Rename folder"
+                    aria-label={`Rename ${folder.name}`}
+                  >
+                    <Pencil size={13} aria-hidden="true" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(folder);
+                    }}
+                    className="p-1 rounded text-cream-500 dark:text-gray-400 hover:text-red-500 hover:bg-cream-200 dark:hover:bg-navy-800 transition-colors"
+                    title="Delete folder"
+                    aria-label={`Delete ${folder.name}`}
+                  >
+                    <Trash2 size={13} aria-hidden="true" />
+                  </button>
+                </div>
+                <span className="text-xs font-medium px-1.5 py-0.5 rounded-md bg-cream-200/70 dark:bg-navy-800 text-cream-600 dark:text-gray-300 min-w-[1.5rem] text-center">
+                  {countsByFolder[folder.id] || 0}
+                </span>
               </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
 
-      {folders.length === 0 ? (
-        <button
-          onClick={startCreate}
-          className={`col-span-full ${baseCard} ${idleCard} border-dashed items-center justify-center text-cream-500 dark:text-gray-400 hover:bg-cream-100 dark:hover:bg-navy-800/60`}
-        >
-          <FolderPlus size={16} aria-hidden="true" />
-          <span className="text-xs font-medium">Create your first folder</span>
-        </button>
-      ) : (
-        <button
-          onClick={startCreate}
-          className={`${baseCard} ${idleCard} border-dashed items-center justify-center text-cream-500 dark:text-gray-400 hover:bg-cream-100 dark:hover:bg-navy-800/60`}
-          title="New folder"
-          aria-label="New folder"
-        >
-          <FolderPlus size={16} aria-hidden="true" />
-          <span className="text-xs font-medium">New</span>
-        </button>
-      )}
+      <button
+        onClick={startCreate}
+        className={`flex items-center justify-center gap-1.5 rounded-xl border border-dashed px-3 py-2.5 text-xs font-medium text-cream-500 dark:text-gray-400 hover:bg-cream-100 dark:hover:bg-navy-800/60 transition-colors ${idleCard}`}
+        title="New folder"
+        aria-label="New folder"
+      >
+        <FolderPlus size={15} aria-hidden="true" />
+        <span>{folders.length === 0 ? 'Create your first folder' : 'New folder'}</span>
+      </button>
     </div>
   );
 };
