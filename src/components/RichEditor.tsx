@@ -317,7 +317,7 @@ export const RichEditor: React.FC<RichEditorProps> = ({
     return () => {
       editor.off('update', updateCounts);
     };
-  }, [editor]);
+  }, [editor, noteId, content]);
 
   useEffect(() => {
     if (!editor) return;

@@ -190,6 +190,12 @@
      text-align: right;
    }
 
+   .tiptap :is(ul, ol):has(.urdu-text) {
+     direction: rtl;
+     padding-left: 0;
+     padding-right: 1.5rem;
+   }
+
    .tiptap .urdu-text,
    .tiptap p.urdu-text,
    .tiptap .urdu-text * {
