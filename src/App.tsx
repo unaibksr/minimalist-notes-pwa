@@ -575,6 +575,16 @@ export const App: React.FC = () => {
   const handleSelectNote = useCallback(
     (id: string) => {
       setActiveNoteId(id);
+      pushScreen('fullscreen');
+      setIsFullscreen(true);
+    },
+    [pushScreen]
+  );
+
+  const handleEditNote = useCallback(
+    (id: string) => {
+      setActiveNoteId(id);
+      setIsFullscreen(false);
       pushScreen('editor');
     },
     [pushScreen]
@@ -779,6 +789,7 @@ export const App: React.FC = () => {
     await saveNoteToIDB(newNote);
     setNotes((prev) => [newNote, ...prev]);
     setActiveNoteId(newNote.id);
+    setIsFullscreen(false);
     pushScreen('editor');
     if (isMobileViewport()) setActiveFolder('all');
     runSync();
@@ -1197,6 +1208,7 @@ export const App: React.FC = () => {
                     folderName={note.folderId ? foldersById[note.folderId]?.name ?? null : null}
                     folderColor={note.folderId ? foldersById[note.folderId]?.color ?? null : null}
                     onSelect={handleSelectNote}
+                    onEdit={handleEditNote}
                     onDelete={handleDeleteNote}
                     onTogglePin={handleTogglePin}
                   />

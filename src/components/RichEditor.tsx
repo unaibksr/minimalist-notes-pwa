@@ -103,6 +103,18 @@ export const RichEditor: React.FC<RichEditorProps> = ({
   const tableMenuRef = useRef<HTMLDivElement>(null);
   const moreOptionsRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const fullscreenHoldTimerRef = useRef<number | null>(null);
+  const fullscreenHoldStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const clearFullscreenHold = () => {
+    if (fullscreenHoldTimerRef.current !== null) {
+      window.clearTimeout(fullscreenHoldTimerRef.current);
+      fullscreenHoldTimerRef.current = null;
+    }
+    fullscreenHoldStartRef.current = null;
+  };
+
+  useEffect(() => clearFullscreenHold, [isFullscreen]);
 
   const insertImageFile = async (file: File, targetEditor: ReturnType<typeof useEditor>) => {
     if (!targetEditor || !file.type.startsWith('image/')) return;
@@ -837,6 +849,26 @@ export const RichEditor: React.FC<RichEditorProps> = ({
       )}
 
       <div
+        onPointerDown={(e) => {
+          if (!isFullscreen) return;
+          if (e.button !== 0 && e.pointerType === 'mouse') return;
+          if ((e.target as HTMLElement).closest('a, button')) return;
+          clearFullscreenHold();
+          fullscreenHoldStartRef.current = { x: e.clientX, y: e.clientY };
+          fullscreenHoldTimerRef.current = window.setTimeout(() => {
+            fullscreenHoldTimerRef.current = null;
+            onToggleFullscreen();
+          }, 450);
+        }}
+        onPointerMove={(e) => {
+          const start = fullscreenHoldStartRef.current;
+          if (!start) return;
+          if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) {
+            clearFullscreenHold();
+          }
+        }}
+        onPointerUp={clearFullscreenHold}
+        onPointerCancel={clearFullscreenHold}
         className={`flex-1 min-h-0 overflow-y-auto w-full max-w-full ${
           isFullscreen ? 'p-6 md:py-12' : 'px-4 md:px-12 pt-4 pb-24 md:pb-4'
         }`}

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Trash2, Pin, PinOff } from 'lucide-react';
 import type { Note } from '../types';
 import { highlightText } from '../lib/highlight';
@@ -23,6 +23,7 @@ interface NoteItemProps {
   folderName: string | null;
   folderColor?: string | null;
   onSelect: (id: string) => void;
+  onEdit?: (id: string) => void;
   onDelete: (id: string) => void;
   onTogglePin?: (id: string) => void;
 }
@@ -35,9 +36,50 @@ export const NoteItem = React.memo(function NoteItem({
   folderName,
   folderColor,
   onSelect,
+  onEdit,
   onDelete,
   onTogglePin,
 }: NoteItemProps) {
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressTriggeredRef = useRef(false);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const clearLongPress = useCallback(() => {
+    if (longPressTimerRef.current !== null) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    pointerStartRef.current = null;
+  }, []);
+
+  useEffect(() => clearLongPress, [clearLongPress]);
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      if ((e.target as HTMLElement).closest('button')) return;
+      clearLongPress();
+      longPressTriggeredRef.current = false;
+      pointerStartRef.current = { x: e.clientX, y: e.clientY };
+      longPressTimerRef.current = window.setTimeout(() => {
+        longPressTimerRef.current = null;
+        longPressTriggeredRef.current = true;
+        onEdit?.(note.id);
+      }, 450);
+    },
+    [clearLongPress, note.id, onEdit]
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const start = pointerStartRef.current;
+      if (!start) return;
+      if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) {
+        clearLongPress();
+      }
+    },
+    [clearLongPress]
+  );
   // Mobile gesture: a deliberate swipe left on a note deletes it (undoable).
   const swipeHandlers = useSwipe({
     threshold: 80,
@@ -66,7 +108,21 @@ export const NoteItem = React.memo(function NoteItem({
   return (
     <div
       {...swipeHandlers}
-      onClick={() => onSelect(note.id)}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={clearLongPress}
+      onPointerCancel={clearLongPress}
+      onPointerLeave={clearLongPress}
+      onContextMenu={(e) => {
+        if (longPressTriggeredRef.current) e.preventDefault();
+      }}
+      onClick={() => {
+        if (longPressTriggeredRef.current) {
+          longPressTriggeredRef.current = false;
+          return;
+        }
+        onSelect(note.id);
+      }}
       className={`mx-2 my-1.5 px-3 py-2.5 rounded-xl cursor-pointer group relative border transition-all duration-150 ${
         active
           ? 'bg-cream-50 dark:bg-navy-800 border-amber-600/60 dark:border-primary-500/50 ring-1 ring-amber-600/25 dark:ring-primary-500/30 shadow-sm'
