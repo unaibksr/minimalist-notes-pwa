@@ -100,12 +100,9 @@
     color: #c4b5fd; /* violet-300 — clear lavender separation */
   }
 
-  .tiptap h3 {
-    color: #047857; /* deep botanical emerald ink */
-  }
-
+  .tiptap h3,
   .dark .tiptap h3 {
-    color: #6ee7b7; /* emerald-300 — vivid mint */
+    color: #ff974d;
   }
 
   .tiptap h4 {
@@ -142,6 +139,22 @@
   .dark .tiptap strong {
     color: #fde047; /* yellow-300 — bright high-contrast yellow */
     font-weight: 700;
+  }
+
+  /* Words or sentences ending with ':' get distinct colours from bold. */
+  .tiptap .colon-lead,
+  .dark .tiptap .colon-lead {
+    color: #cc8cff;
+  }
+
+  .tiptap strong .colon-lead,
+  .tiptap .colon-lead strong {
+    color: #0f766e;
+  }
+
+  .dark .tiptap strong .colon-lead,
+  .dark .tiptap .colon-lead strong {
+    color: #2fed75;
   }
 
   .btn-amber {

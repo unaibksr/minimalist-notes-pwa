@@ -12,6 +12,7 @@ import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import Strike from '@tiptap/extension-strike';
 import { MarkdownPasteHandler } from '../lib/pasteHandler';
+import { ColonHighlight } from '../lib/colonHighlight';
 import { markdownToHtml, hasMarkdown } from '../lib/markdownToHtml';
 import { UrduText } from '../lib/urduText';
 import { NoteImage, compressImageToDataUrl } from '../lib/noteImage';
@@ -140,6 +141,7 @@ export const RichEditor: React.FC<RichEditorProps> = ({
         placeholder: 'Start typing your note...',
       }),
       MarkdownPasteHandler,
+      ColonHighlight,
       UrduText,
     ],
     content,
