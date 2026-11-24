@@ -27,6 +27,7 @@ import {
   AlignJustify,
   AlignCenter,
   AlignLeft,
+  AlignRight,
   Undo,
   Redo,
   Eraser,
@@ -392,197 +393,212 @@ export const RichEditor: React.FC<RichEditorProps> = ({
       {!isFullscreen && (
         <div className="shrink-0 bg-transparent border-b border-cream-300 dark:border-navy-600">
           <div className="px-4 md:px-12 py-2">
-            <div className="flex flex-wrap items-center gap-0.5 p-1.5 border border-cream-300 dark:border-navy-600 bg-cream-100/75 dark:bg-navy-900 rounded-xl shadow-sm">
-              <button
-                onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-                className={toolBtn(editor.isActive('heading', { level: 1 }))}
-                title="Heading 1"
-                aria-label="Heading 1"
-              >
-                <Heading1 size={18} className="text-amber-600 dark:text-amber-400" />
-              </button>
-              <button
-                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-                className={toolBtn(editor.isActive('heading', { level: 2 }))}
-                title="Heading 2"
-                aria-label="Heading 2"
-              >
-                <Heading2 size={18} className="text-amber-600 dark:text-amber-400" />
-              </button>
-              <button
-                onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-                className={toolBtn(editor.isActive('heading', { level: 3 }))}
-                title="Heading 3"
-                aria-label="Heading 3"
-              >
-                <Heading3 size={18} className="text-amber-600 dark:text-amber-400" />
-              </button>
-              <button
-                onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
-                className={toolBtn(editor.isActive('heading', { level: 4 }))}
-                title="Heading 4"
-                aria-label="Heading 4"
-              >
-                <Heading4 size={18} className="text-amber-600 dark:text-amber-400" />
-              </button>
-
-              <div className="w-px h-5 mx-1 bg-cream-300 dark:bg-navy-700" />
-
-              <button
-                onClick={() => editor.chain().focus().toggleBold().run()}
-                className={toolBtn(editor.isActive('bold'))}
-                title="Bold (Ctrl+B)"
-                aria-label="Bold"
-              >
-                <Bold size={18} className="text-amber-600 dark:text-amber-400" />
-              </button>
-              <button
-                onClick={() => editor.chain().focus().toggleItalic().run()}
-                className={toolBtn(editor.isActive('italic'))}
-                title="Italic (Ctrl+I)"
-                aria-label="Italic"
-              >
-                <Italic size={18} className="text-amber-600 dark:text-amber-400" />
-              </button>
-              <button
-                onClick={() => editor.chain().focus().toggleBulletList().run()}
-                className={toolBtn(editor.isActive('bulletList'))}
-                title="Bullet List"
-                aria-label="Bullet List"
-              >
-                <List size={18} className="text-amber-600 dark:text-amber-400" />
-              </button>
-              <button
-                onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                className={toolBtn(editor.isActive('orderedList'))}
-                title="Numbered List"
-                aria-label="Numbered List"
-              >
-                <ListOrdered size={18} className="text-amber-600 dark:text-amber-400" />
-              </button>
-              <button
-                onClick={() => editor.chain().focus().toggleBlockquote().run()}
-                className={toolBtn(editor.isActive('blockquote'))}
-                title="Quote"
-                aria-label="Quote"
-              >
-                <Quote size={18} className="text-amber-600 dark:text-amber-400" />
-              </button>
-
-              <div className="w-px h-5 mx-1 bg-cream-300 dark:bg-navy-700" />
-
-              <button
-                onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-                className={toolBtn(editor.isActive({ textAlign: 'justify' }))}
-                title="Justify Text"
-                aria-label="Justify Text"
-              >
-                <AlignJustify size={18} className="text-amber-600 dark:text-amber-400" />
-              </button>
-              <button
-                onClick={() => editor.chain().focus().setTextAlign('center').run()}
-                className={toolBtn(editor.isActive({ textAlign: 'center' }))}
-                title="Center Text"
-                aria-label="Center Text"
-              >
-                <AlignCenter size={18} className="text-amber-600 dark:text-amber-400" />
-              </button>
-              <button
-                onClick={() => editor.chain().focus().setTextAlign('left').run()}
-                className={toolBtn(editor.isActive({ textAlign: 'left' }))}
-                title="Align Left"
-                aria-label="Align Left"
-              >
-                <AlignLeft size={18} className="text-amber-600 dark:text-amber-400" />
-              </button>
-
-              <div className="w-px h-5 mx-1 bg-cream-300 dark:bg-navy-700" />
-
-              <div className="flex items-center gap-1 px-1">
-                <button
-                  onClick={decreaseFontSize}
-                  className="px-2 py-1 text-xs border border-cream-300 dark:border-navy-600 rounded hover:bg-cream-200 dark:hover:bg-navy-800"
-                  title="Decrease Font Size (Ctrl+Shift+[)"
-                >
-                  A-
-                </button>
-                <span className="text-xs w-6 text-center text-cream-600 dark:text-gray-300">
-                  {fontSize}
-                </span>
-                <button
-                  onClick={increaseFontSize}
-                  className="px-2 py-1 text-xs border border-cream-300 dark:border-navy-600 rounded hover:bg-cream-200 dark:hover:bg-navy-800"
-                  title="Increase Font Size (Ctrl+Shift+])"
-                >
-                  A+
-                </button>
-                {fontSize !== 16 && (
+            <div className="p-2 border border-cream-300 dark:border-navy-600 bg-cream-100/75 dark:bg-navy-900 rounded-xl shadow-sm">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                {/* Headings */}
+                <div className="flex items-center gap-0.5 pr-2 border-r border-cream-300 dark:border-navy-700">
                   <button
-                    onClick={resetFontSize}
-                    className="px-2 py-1 text-xs border border-cream-300 dark:border-navy-600 rounded hover:bg-cream-200 dark:hover:bg-navy-800 text-cream-500 dark:text-gray-400"
-                    title="Reset Font Size"
+                    onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+                    className={toolBtn(editor.isActive('heading', { level: 1 }))}
+                    title="Heading 1"
+                    aria-label="Heading 1"
                   >
-                    Reset
+                    <Heading1 size={18} className="text-amber-600 dark:text-amber-400" />
                   </button>
-                )}
-              </div>
+                  <button
+                    onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                    className={toolBtn(editor.isActive('heading', { level: 2 }))}
+                    title="Heading 2"
+                    aria-label="Heading 2"
+                  >
+                    <Heading2 size={18} className="text-amber-600 dark:text-amber-400" />
+                  </button>
+                  <button
+                    onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+                    className={toolBtn(editor.isActive('heading', { level: 3 }))}
+                    title="Heading 3"
+                    aria-label="Heading 3"
+                  >
+                    <Heading3 size={18} className="text-amber-600 dark:text-amber-400" />
+                  </button>
+                  <button
+                    onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
+                    className={toolBtn(editor.isActive('heading', { level: 4 }))}
+                    title="Heading 4"
+                    aria-label="Heading 4"
+                  >
+                    <Heading4 size={18} className="text-amber-600 dark:text-amber-400" />
+                  </button>
+                </div>
 
-              <div className="w-px h-5 mx-1 bg-cream-300 dark:bg-navy-700" />
+                {/* Text & Lists */}
+                <div className="flex items-center gap-0.5 pr-2 border-r border-cream-300 dark:border-navy-700">
+                  <button
+                    onClick={() => editor.chain().focus().toggleBold().run()}
+                    className={toolBtn(editor.isActive('bold'))}
+                    title="Bold (Ctrl+B)"
+                    aria-label="Bold"
+                  >
+                    <Bold size={18} className="text-amber-600 dark:text-amber-400" />
+                  </button>
+                  <button
+                    onClick={() => editor.chain().focus().toggleItalic().run()}
+                    className={toolBtn(editor.isActive('italic'))}
+                    title="Italic (Ctrl+I)"
+                    aria-label="Italic"
+                  >
+                    <Italic size={18} className="text-amber-600 dark:text-amber-400" />
+                  </button>
+                  <button
+                    onClick={() => editor.chain().focus().toggleBulletList().run()}
+                    className={toolBtn(editor.isActive('bulletList'))}
+                    title="Bullet List"
+                    aria-label="Bullet List"
+                  >
+                    <List size={18} className="text-amber-600 dark:text-amber-400" />
+                  </button>
+                  <button
+                    onClick={() => editor.chain().focus().toggleOrderedList().run()}
+                    className={toolBtn(editor.isActive('orderedList'))}
+                    title="Numbered List"
+                    aria-label="Numbered List"
+                  >
+                    <ListOrdered size={18} className="text-amber-600 dark:text-amber-400" />
+                  </button>
+                  <button
+                    onClick={() => editor.chain().focus().toggleBlockquote().run()}
+                    className={toolBtn(editor.isActive('blockquote'))}
+                    title="Quote"
+                    aria-label="Quote"
+                  >
+                    <Quote size={18} className="text-amber-600 dark:text-amber-400" />
+                  </button>
+                </div>
 
-              <button
-                onClick={cleanBlankLines}
-                className={toolBtn()}
-                title="Remove Extra Blank Lines"
-                aria-label="Remove Extra Blank Lines"
-              >
-                <Eraser size={18} className="text-amber-600 dark:text-amber-400" />
-              </button>
+                {/* Alignment */}
+                <div className="flex items-center gap-0.5 pr-2 border-r border-cream-300 dark:border-navy-700">
+                  <button
+                    onClick={() => editor.chain().focus().setTextAlign('left').run()}
+                    className={toolBtn(editor.isActive({ textAlign: 'left' }))}
+                    title="Align Left"
+                    aria-label="Align Left"
+                  >
+                    <AlignLeft size={18} className="text-amber-600 dark:text-amber-400" />
+                  </button>
+                  <button
+                    onClick={() => editor.chain().focus().setTextAlign('center').run()}
+                    className={toolBtn(editor.isActive({ textAlign: 'center' }))}
+                    title="Center Text"
+                    aria-label="Center Text"
+                  >
+                    <AlignCenter size={18} className="text-amber-600 dark:text-amber-400" />
+                  </button>
+                  <button
+                    onClick={() => editor.chain().focus().setTextAlign('right').run()}
+                    className={toolBtn(editor.isActive({ textAlign: 'right' }))}
+                    title="Align Right"
+                    aria-label="Align Right"
+                  >
+                    <AlignRight size={18} className="text-amber-600 dark:text-amber-400" />
+                  </button>
+                  <button
+                    onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+                    className={toolBtn(editor.isActive({ textAlign: 'justify' }))}
+                    title="Justify Text"
+                    aria-label="Justify Text"
+                  >
+                    <AlignJustify size={18} className="text-amber-600 dark:text-amber-400" />
+                  </button>
+                </div>
 
-              <button
-                onClick={toggleUrduText}
-                className={toolBtn(editor.isActive('urdu'))}
-                title="Urdu Text (Noto Nastaliq Urdu, Right Aligned)"
-                aria-label="Urdu Text"
-              >
-                <span
-                  style={{ fontFamily: "'Noto Nastaliq Urdu', 'Noto Nastaliq', sans-serif" }}
-                  className="text-amber-600 dark:text-amber-400 text-base leading-none"
-                >
-                  ن
-                </span>
-              </button>
+                {/* Font Size */}
+                <div className="flex items-center gap-1 pr-2 border-r border-cream-300 dark:border-navy-700">
+                  <button
+                    onClick={decreaseFontSize}
+                    className="px-2 py-1 text-xs border border-cream-300 dark:border-navy-600 rounded hover:bg-cream-200 dark:hover:bg-navy-800"
+                    title="Decrease Font Size (Ctrl+Shift+[)"
+                  >
+                    A-
+                  </button>
+                  <span className="text-xs w-6 text-center text-cream-600 dark:text-gray-300">
+                    {fontSize}
+                  </span>
+                  <button
+                    onClick={increaseFontSize}
+                    className="px-2 py-1 text-xs border border-cream-300 dark:border-navy-600 rounded hover:bg-cream-200 dark:hover:bg-navy-800"
+                    title="Increase Font Size (Ctrl+Shift+])"
+                  >
+                    A+
+                  </button>
+                  {fontSize !== 16 && (
+                    <button
+                      onClick={resetFontSize}
+                      className="px-2 py-1 text-xs border border-cream-300 dark:border-navy-600 rounded hover:bg-cream-200 dark:hover:bg-navy-800 text-cream-500 dark:text-gray-400"
+                      title="Reset Font Size"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
 
-              <button
-                onClick={renderMarkdown}
-                className={toolBtn()}
-                title="Render Markdown"
-                aria-label="Render Markdown"
-              >
-                <Eye size={18} className="text-amber-600 dark:text-amber-400" />
-              </button>
+                {/* Formatting Utilities */}
+                <div className="flex items-center gap-0.5 pr-2 border-r border-cream-300 dark:border-navy-700">
+                  <button
+                    onClick={cleanBlankLines}
+                    className={toolBtn()}
+                    title="Remove Extra Blank Lines"
+                    aria-label="Remove Extra Blank Lines"
+                  >
+                    <Eraser size={18} className="text-amber-600 dark:text-amber-400" />
+                  </button>
 
-              <div className="w-px h-5 mx-1 bg-cream-300 dark:bg-navy-700" />
+                  <button
+                    onClick={toggleUrduText}
+                    className={toolBtn(editor.isActive('urdu'))}
+                    title="Urdu Text (Noto Nastaliq Urdu, Right Aligned)"
+                    aria-label="Urdu Text"
+                  >
+                    <span
+                      style={{ fontFamily: "'Noto Nastaliq Urdu', 'Noto Nastaliq', sans-serif" }}
+                      className="text-amber-600 dark:text-amber-400 text-base leading-none"
+                    >
+                      ن
+                    </span>
+                  </button>
 
-              <button
-                onClick={() => editor.chain().focus().undo().run()}
-                disabled={!editor.can().undo()}
-                className={`${toolBtn()} disabled:opacity-40`}
-                title="Undo (Ctrl+Z)"
-                aria-label="Undo"
-              >
-                <Undo size={18} className="text-amber-600 dark:text-amber-400" />
-              </button>
-              <button
-                onClick={() => editor.chain().focus().redo().run()}
-                disabled={!editor.can().redo()}
-                className={`${toolBtn()} disabled:opacity-40`}
-                title="Redo (Ctrl+Y)"
-                aria-label="Redo"
-              >
-                <Redo size={18} className="text-amber-600 dark:text-amber-400" />
-              </button>
+                  <button
+                    onClick={renderMarkdown}
+                    className={toolBtn()}
+                    title="Render Markdown"
+                    aria-label="Render Markdown"
+                  >
+                    <Eye size={18} className="text-amber-600 dark:text-amber-400" />
+                  </button>
+                </div>
 
-              <div className="ml-auto flex items-center gap-0.5">
+                {/* History */}
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => editor.chain().focus().undo().run()}
+                    disabled={!editor.can().undo()}
+                    className={`${toolBtn()} disabled:opacity-40`}
+                    title="Undo (Ctrl+Z)"
+                    aria-label="Undo"
+                  >
+                    <Undo size={18} className="text-amber-600 dark:text-amber-400" />
+                  </button>
+                  <button
+                    onClick={() => editor.chain().focus().redo().run()}
+                    disabled={!editor.can().redo()}
+                    className={`${toolBtn()} disabled:opacity-40`}
+                    title="Redo (Ctrl+Y)"
+                    aria-label="Redo"
+                  >
+                    <Redo size={18} className="text-amber-600 dark:text-amber-400" />
+                  </button>
+                </div>
+
+                <div className="ml-auto flex items-center gap-0.5">
                 {/* Table dropdown */}
                 <div className="relative" ref={tableMenuRef}>
                   <button
@@ -801,9 +817,10 @@ export const RichEditor: React.FC<RichEditorProps> = ({
                   <Download size={18} className="text-amber-600 dark:text-amber-400" />
                 </button>
               </div>
-              <button
-                onClick={onToggleFullscreen}
-                className="w-full mt-1.5 h-8 px-4 rounded-lg border border-cream-300 dark:border-navy-600 bg-cream-200/70 dark:bg-navy-800/90 hover:bg-cream-200 dark:hover:bg-navy-700 text-amber-700 dark:text-amber-400 text-sm font-medium tracking-wide flex items-center justify-center gap-2 transition-colors shadow-sm"
+            </div>
+            <button
+              onClick={onToggleFullscreen}
+              className="w-full mt-2 h-8 px-4 rounded-lg border border-cream-300 dark:border-navy-600 bg-cream-200/70 dark:bg-navy-800/90 hover:bg-cream-200 dark:hover:bg-navy-700 text-amber-700 dark:text-amber-400 text-sm font-medium tracking-wide flex items-center justify-center gap-2 transition-colors shadow-sm"
                 title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Reading Mode'}
                 aria-label="Toggle reading mode"
               >
