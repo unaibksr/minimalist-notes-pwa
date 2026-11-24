@@ -13,6 +13,7 @@ import Underline from '@tiptap/extension-underline';
 import Strike from '@tiptap/extension-strike';
 import { MarkdownPasteHandler } from '../lib/pasteHandler';
 import { ColonHighlight } from '../lib/colonHighlight';
+import { QuoteHighlight } from '../lib/quoteHighlight';
 import { markdownToHtml, hasMarkdown } from '../lib/markdownToHtml';
 import { UrduText } from '../lib/urduText';
 import { NoteImage, compressImageToDataUrl } from '../lib/noteImage';
@@ -142,6 +143,7 @@ export const RichEditor: React.FC<RichEditorProps> = ({
       }),
       MarkdownPasteHandler,
       ColonHighlight,
+      QuoteHighlight,
       UrduText,
     ],
     content,
@@ -798,19 +800,20 @@ export const RichEditor: React.FC<RichEditorProps> = ({
                 >
                   <Download size={18} className="text-amber-600 dark:text-amber-400" />
                 </button>
-                <button
-                  onClick={onToggleFullscreen}
-                  className={toolBtn()}
-                  title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Reading Mode'}
-                  aria-label="Toggle reading mode"
-                >
-                  {isFullscreen ? (
-                    <Minimize2 size={18} className="text-amber-600 dark:text-amber-400" />
-                  ) : (
-                    <Maximize2 size={18} className="text-amber-600 dark:text-amber-400" />
-                  )}
-                </button>
               </div>
+              <button
+                onClick={onToggleFullscreen}
+                className="w-full mt-1.5 h-8 px-4 rounded-lg border border-cream-300 dark:border-navy-600 bg-cream-200/70 dark:bg-navy-800/90 hover:bg-cream-200 dark:hover:bg-navy-700 text-amber-700 dark:text-amber-400 text-sm font-medium tracking-wide flex items-center justify-center gap-2 transition-colors shadow-sm"
+                title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Reading Mode'}
+                aria-label="Toggle reading mode"
+              >
+                {isFullscreen ? (
+                  <Minimize2 size={15} className="text-amber-600 dark:text-amber-400" />
+                ) : (
+                  <Maximize2 size={15} className="text-amber-600 dark:text-amber-400" />
+                )}
+                <span>Fullscreen</span>
+              </button>
             </div>
           </div>
         </div>
